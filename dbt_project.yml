@@ -32,3 +32,9 @@ models:
         +materialized: view
         +docs:
           show: true
+    marts:
+      fivb:
+        +schema: mart
+        +materialized: view
+        +docs:
+          show: true

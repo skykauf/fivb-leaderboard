@@ -1,0 +1,74 @@
+# Marts: analytics-ready datasets
+version: 2
+models:
+  - name: champion_mart
+    description: "One row per tournament champion with full tournament, team, final match, and ranking-at-event context."
+    columns:
+      - name: tournament_id
+        description: "Unique tournament identifier (VIS No)."
+      - name: team_id
+        description: "Champion team identifier for this tournament."
+      - name: tournament_name
+        description: "Official tournament name."
+      - name: season
+        description: "Season label (e.g. 2024)."
+      - name: season_year
+        description: "Numeric season year."
+      - name: tournament_gender
+        description: "Men / Women."
+      - name: tournament_tier
+        description: "Tournament tier (e.g. World Championship, Olympic Games)."
+      - name: is_major
+        description: "True for World Championship or Olympic Games."
+      - name: tournament_start_date
+        description: "Tournament start date."
+      - name: tournament_end_date
+        description: "Tournament end date."
+      - name: tournament_duration_days
+        description: "Length of tournament in days."
+      - name: tournament_city
+        description: "Host city."
+      - name: tournament_host_country_code
+        description: "Host country code."
+      - name: tournament_host_country_name
+        description: "Host country name."
+      - name: tournament_status
+        description: "Tournament status."
+      - name: tournament_timezone
+        description: "Tournament timezone."
+      - name: champion_team_display_name
+        description: "Champion team display name (Player A / Player B)."
+      - name: champion_player_a_name
+        description: "Champion player A full name."
+      - name: champion_player_b_name
+        description: "Champion player B full name."
+      - name: champion_country_code
+        description: "Champion team country code."
+      - name: finishing_pos
+        description: "Finishing position (1 for champion)."
+      - name: points
+        description: "Points earned at this tournament."
+      - name: prize_money
+        description: "Prize money for this placement."
+      - name: final_played_at
+        description: "When the final match was played."
+      - name: final_opponent_display_name
+        description: "Runner-up team display name."
+      - name: final_opponent_country_code
+        description: "Runner-up country code."
+      - name: final_score_sets
+        description: "Final match score (sets)."
+      - name: final_duration_minutes
+        description: "Final match duration in minutes."
+      - name: final_round_name
+        description: "Round name for the final (e.g. Final, Gold Medal Match)."
+      - name: ranking_position_at_tournament
+        description: "Champion team world ranking position at or just before tournament end."
+      - name: ranking_type_at_tournament
+        description: "Ranking type (e.g. World Tour) for the snapshot."
+      - name: ranking_snapshot_date
+        description: "Date of the ranking snapshot used."
+      - name: is_top_10_at_tournament
+        description: "True if ranking position was in top 10 at tournament time."
+      - name: is_top_16_at_tournament
+        description: "True if ranking position was in top 16 at tournament time (Olympic-relevant)."

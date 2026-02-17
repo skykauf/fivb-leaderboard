@@ -1,0 +1,58 @@
+# Core layer: dimensions and facts with derived fields
+version: 2
+models:
+  - name: dim_tournaments
+    description: "Tournaments with derived fields (duration, season year, is_major)."
+    columns:
+      - name: tournament_id
+        description: "Unique tournament number (VIS No)."
+      - name: duration_days
+        description: "Tournament length in days (end_date - start_date + 1)."
+      - name: season_year
+        description: "Numeric season year parsed from season text."
+      - name: is_major
+        description: "True for World Championship or Olympic Games."
+
+  - name: dim_team_tournaments
+    description: "Team at a tournament with both player names and tournament context."
+    columns:
+      - name: team_id
+        description: "Team number for this tournament (VIS No)."
+      - name: tournament_id
+      - name: team_display_name
+        description: "Derived: 'Player A / Player B' for display."
+      - name: player_a_name
+      - name: player_b_name
+
+  - name: fct_matches
+    description: "Match-level fact with tournament, round, team display names and derived flags."
+    columns:
+      - name: match_id
+      - name: tournament_id
+      - name: is_winner_team1
+        description: "True when team1 won the match."
+      - name: is_final
+        description: "True for final / gold medal match."
+      - name: is_pool_phase
+        description: "True for pool play rounds."
+
+  - name: fct_tournament_standings
+    description: "Tournament finishing positions with tournament and team context."
+    columns:
+      - name: tournament_id
+      - name: team_id
+      - name: finishing_pos
+      - name: is_podium
+        description: "True when finishing_pos <= 3."
+      - name: is_champion
+        description: "True when finishing_pos = 1."
+
+  - name: fct_team_rankings
+    description: "World Tour / Olympic selection rankings with player names and derived flags."
+    columns:
+      - name: ranking_type
+      - name: snapshot_date
+      - name: position
+      - name: is_top_10
+      - name: is_top_16
+        description: "Relevant for Olympic qualification cutoffs."

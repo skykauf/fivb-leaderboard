@@ -1,0 +1,24 @@
+{
+  "request_type": "GetBeachRound",
+  "request_xml": "<Requests><Request Type=\"GetBeachRound\" Fields=\"No NoTournament NoInTournament Code Name Bracket Phase StartDate EndDate Version RankMethod\" No=\"335652\" /></Requests>",
+  "request_url": "https://www.fivb.org/Vis2009/XmlRequest.asmx",
+  "response_status_code": 200,
+  "response_content_type": "application/xml",
+  "response_text": "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?><Responses><BeachRound No=\"335652\" NoTournament=\"2\" Code=\"I\" Name=\"Round 1\" Bracket=\"W\" Phase=\"3\" StartDate=\"2025-09-04\" EndDate=\"2025-09-04\" Version=\"353196\" RankMethod=\"&lt;DirectElimination /&gt;\" /></Responses>",
+  "parsed_record_count": 1,
+  "parsed_sample": [
+    {
+      "No": "335652",
+      "NoTournament": "2",
+      "Code": "I",
+      "Name": "Round 1",
+      "Bracket": "W",
+      "Phase": "3",
+      "StartDate": "2025-09-04",
+      "EndDate": "2025-09-04",
+      "Version": "353196",
+      "RankMethod": "<DirectElimination />"
+    }
+  ],
+  "_description": "Single beach round by No"
+}

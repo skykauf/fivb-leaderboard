@@ -1,0 +1,23 @@
+# Raw FIVB tables populated by etl.load_raw (Postgres schema: raw)
+version: 2
+sources:
+  - name: raw_fivb
+    description: "FIVB VIS Web Service raw tables (schema raw)"
+    schema: raw
+    tables:
+      - name: raw_fivb_events
+        description: "Events (e.g. World Tour 2025) from GetEventList"
+      - name: raw_fivb_tournaments
+        description: "Beach tournaments from GetBeachTournamentList"
+      - name: raw_fivb_teams
+        description: "Beach teams from GetBeachTeamList"
+      - name: raw_fivb_players
+        description: "Players from GetPlayerList"
+      - name: raw_fivb_matches
+        description: "Beach matches from GetBeachMatchList (bulk)"
+      - name: raw_fivb_results
+        description: "Tournament finishing positions from GetBeachTournamentRanking"
+      - name: raw_fivb_rounds
+        description: "Tournament rounds (structure) from GetBeachRoundList"
+      - name: raw_fivb_team_rankings
+        description: "World Tour and Olympic selection rankings from GetBeachWorldTourRanking / GetBeachOlympicSelectionRanking"

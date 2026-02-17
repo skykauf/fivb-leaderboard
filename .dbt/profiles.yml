@@ -1,0 +1,25 @@
+# dbt profile for FIVB Leaderboard (project-level)
+# Uses same DB as ETL. Set env vars (e.g. in .env or export):
+#   DB_PASSWORD  (required) – same as in DATABASE_URL
+#   DB_USER      (optional, default: fivb_leaderboard)
+#   DB_NAME      (optional, default: fivb_leaderboard)
+#   PGHOST       (optional, default: localhost)
+#   PGPORT       (optional, default: 5432)
+#
+# Run dbt from project root with this profile:
+#   DBT_PROFILES_DIR=.dbt dbt run
+# Or once: export DBT_PROFILES_DIR=/path/to/fivb-leaderboard/.dbt
+
+fivb_leaderboard:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('PGHOST', 'localhost') }}"
+      port: "{{ env_var('PGPORT', 5432) | int }}"
+      user: "{{ env_var('DB_USER', 'fivb_leaderboard') }}"
+      password: "{{ env_var('DB_PASSWORD', 'yourpassword') }}"
+      dbname: "{{ env_var('DB_NAME', 'fivb_leaderboard') }}"
+      schema: staging
+      threads: 4
+      keepalives_idle: 0

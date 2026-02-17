@@ -1,0 +1,133 @@
+{
+  "base_url": "https://www.fivb.org/Vis2009/XmlRequest.asmx",
+  "endpoints": [
+    {
+      "id": "GetBeachTournamentList",
+      "request_type": "GetBeachTournamentList",
+      "description": "List beach tournaments (optionally filtered by season)",
+      "status_code": 200,
+      "parsed_record_count": 8807,
+      "file": "GetBeachTournamentList.json"
+    },
+    {
+      "id": "GetBeachTournament",
+      "request_type": "GetBeachTournament",
+      "description": "Single beach tournament by No",
+      "status_code": 200,
+      "parsed_record_count": 1,
+      "file": "GetBeachTournament.json"
+    },
+    {
+      "id": "GetBeachTeamList",
+      "request_type": "GetBeachTeamList",
+      "description": "List beach teams (all or filtered by NoTournament)",
+      "status_code": 200,
+      "parsed_record_count": 192850,
+      "file": "GetBeachTeamList.json"
+    },
+    {
+      "id": "GetBeachMatchList",
+      "request_type": "GetBeachMatchList",
+      "description": "List beach matches for a tournament",
+      "status_code": 200,
+      "parsed_record_count": 212070,
+      "file": "GetBeachMatchList.json"
+    },
+    {
+      "id": "GetBeachMatch",
+      "request_type": "GetBeachMatch",
+      "description": "Single beach match by No",
+      "status_code": 200,
+      "parsed_record_count": 1,
+      "file": "GetBeachMatch.json"
+    },
+    {
+      "id": "GetBeachTournamentRanking",
+      "request_type": "GetBeachTournamentRanking",
+      "description": "Tournament finishing positions (Phase: Qualification | MainDraw)",
+      "status_code": 200,
+      "parsed_record_count": 16,
+      "file": "GetBeachTournamentRanking.json"
+    },
+    {
+      "id": "GetBeachRoundList",
+      "request_type": "GetBeachRoundList",
+      "description": "List rounds for a tournament",
+      "status_code": 200,
+      "parsed_record_count": 11,
+      "file": "GetBeachRoundList.json"
+    },
+    {
+      "id": "GetPlayerList",
+      "request_type": "GetPlayerList",
+      "description": "List players (optionally filtered)",
+      "status_code": 200,
+      "parsed_record_count": 120110,
+      "file": "GetPlayerList.json"
+    },
+    {
+      "id": "GetPlayer",
+      "request_type": "GetPlayer",
+      "description": "Single player by No (old-style wrapper required)",
+      "status_code": 200,
+      "parsed_record_count": 1,
+      "file": "GetPlayer.json"
+    },
+    {
+      "id": "GetBeachWorldTourRanking",
+      "request_type": "GetBeachWorldTourRanking",
+      "description": "Beach World Tour ranking",
+      "status_code": 200,
+      "parsed_record_count": 10,
+      "file": "GetBeachWorldTourRanking.json"
+    },
+    {
+      "id": "GetBeachOlympicSelectionRanking",
+      "request_type": "GetBeachOlympicSelectionRanking",
+      "description": "Beach Olympic selection ranking",
+      "status_code": 200,
+      "parsed_record_count": 618,
+      "file": "GetBeachOlympicSelectionRanking.json"
+    },
+    {
+      "id": "GetBeachRound",
+      "request_type": "GetBeachRound",
+      "description": "Single beach round by No",
+      "status_code": 200,
+      "parsed_record_count": 1,
+      "file": "GetBeachRound.json"
+    },
+    {
+      "id": "GetBeachRoundRanking",
+      "request_type": "GetBeachRoundRanking",
+      "description": "Pool/round standings (only for rounds with ranking)",
+      "status_code": 200,
+      "parsed_record_count": 4,
+      "file": "GetBeachRoundRanking.json"
+    },
+    {
+      "id": "GetBeachTeam",
+      "request_type": "GetBeachTeam",
+      "description": "Single beach team by No",
+      "status_code": 200,
+      "parsed_record_count": 1,
+      "file": "GetBeachTeam.json"
+    },
+    {
+      "id": "GetEventList",
+      "request_type": "GetEventList",
+      "description": "List events (e.g. World Tour) with beach filter",
+      "status_code": 200,
+      "parsed_record_count": 730,
+      "file": "GetEventList.json"
+    },
+    {
+      "id": "GetEvent",
+      "request_type": "GetEvent",
+      "description": "Single event by No",
+      "status_code": 200,
+      "parsed_record_count": 1,
+      "file": "GetEvent.json"
+    }
+  ]
+}

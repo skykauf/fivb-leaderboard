@@ -1,0 +1,25 @@
+{
+  "request_type": "GetEvent",
+  "request_xml": "<Requests><Request Type=\"GetEvent\" Fields=\"No Code Name StartDate EndDate Type Version NoParentEvent CountryCode HasBeachTournament IsVisManaged\" No=\"1\" /></Requests>",
+  "request_url": "https://www.fivb.org/Vis2009/XmlRequest.asmx",
+  "response_status_code": 200,
+  "response_content_type": "application/xml",
+  "response_text": "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?><Responses><Event No=\"1\" Code=\"BVB-SWT2011\" Name=\"Swatch World Tour 2011\" StartDate=\"2011-04-18\" EndDate=\"2011-11-06\" Type=\"3\" Version=\"14476\" NoParentEvent=\"0\" CountryCode=\"\" HasBeachTournament=\"1\" IsVisManaged=\"0\"/></Responses>",
+  "parsed_record_count": 1,
+  "parsed_sample": [
+    {
+      "No": "1",
+      "Code": "BVB-SWT2011",
+      "Name": "Swatch World Tour 2011",
+      "StartDate": "2011-04-18",
+      "EndDate": "2011-11-06",
+      "Type": "3",
+      "Version": "14476",
+      "NoParentEvent": "0",
+      "CountryCode": "",
+      "HasBeachTournament": "1",
+      "IsVisManaged": "0"
+    }
+  ],
+  "_description": "Single event by No"
+}

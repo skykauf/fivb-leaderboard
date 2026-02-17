@@ -1,0 +1,48 @@
+{
+  "request_type": "GetBeachRoundRanking",
+  "request_xml": "<Requests><Request Type=\"GetBeachRoundRanking\" Fields=\"Position Rank TeamFederationCode TeamName MatchPoints MatchesWon MatchesLost\" No=\"335654\" /></Requests>",
+  "request_url": "https://www.fivb.org/Vis2009/XmlRequest.asmx",
+  "response_status_code": 200,
+  "response_content_type": "application/xml",
+  "response_text": "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?><Responses><BeachRoundRanking>\r\n  <BeachRoundRankingEntry MatchesLost=\"0\" MatchesWon=\"0\" MatchPoints=\"0\" Position=\"1\" Rank=\"1\" TeamFederationCode=\"USA\" TeamName=\"Brasher/Nuss\" />\r\n  <BeachRoundRankingEntry MatchesLost=\"0\" MatchesWon=\"0\" MatchPoints=\"0\" Position=\"2\" Rank=\"-1\" TeamFederationCode=\"CHN\" TeamName=\"Xue/X. Y. Xia\" />\r\n  <BeachRoundRankingEntry MatchesLost=\"0\" MatchesWon=\"0\" MatchPoints=\"0\" Position=\"3\" Rank=\"-1\" TeamFederationCode=\"GER\" TeamName=\"Ittlinger/Borger\" />\r\n  <BeachRoundRankingEntry MatchesLost=\"0\" MatchesWon=\"0\" MatchPoints=\"0\" Position=\"4\" Rank=\"-1\" TeamFederationCode=\"AUS\" TeamName=\"McHugh/Schumann\" />\r\n</BeachRoundRanking></Responses>",
+  "parsed_record_count": 4,
+  "parsed_sample": [
+    {
+      "MatchesLost": "0",
+      "MatchesWon": "0",
+      "MatchPoints": "0",
+      "Position": "1",
+      "Rank": "1",
+      "TeamFederationCode": "USA",
+      "TeamName": "Brasher/Nuss"
+    },
+    {
+      "MatchesLost": "0",
+      "MatchesWon": "0",
+      "MatchPoints": "0",
+      "Position": "2",
+      "Rank": "-1",
+      "TeamFederationCode": "CHN",
+      "TeamName": "Xue/X. Y. Xia"
+    },
+    {
+      "MatchesLost": "0",
+      "MatchesWon": "0",
+      "MatchPoints": "0",
+      "Position": "3",
+      "Rank": "-1",
+      "TeamFederationCode": "GER",
+      "TeamName": "Ittlinger/Borger"
+    },
+    {
+      "MatchesLost": "0",
+      "MatchesWon": "0",
+      "MatchPoints": "0",
+      "Position": "4",
+      "Rank": "-1",
+      "TeamFederationCode": "AUS",
+      "TeamName": "McHugh/Schumann"
+    }
+  ],
+  "_description": "Pool/round standings (only for rounds with ranking)"
+}

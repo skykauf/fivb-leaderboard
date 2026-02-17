@@ -1,0 +1,32 @@
+{
+  "request_type": "GetBeachTournament",
+  "request_xml": "<Request Type=\"GetBeachTournament\" Fields=\"No Name Code CountryCode City StartDate EndDate Season Gender Type Status NoEvent Title Version StartDateMainDraw EndDateMainDraw StartDateQualification EndDateQualification NbTeamsMainDraw NbTeamsQualification\" No=\"2\" />",
+  "request_url": "https://www.fivb.org/Vis2009/XmlRequest.asmx",
+  "response_status_code": 200,
+  "response_content_type": "application/json",
+  "response_text": "{\"data\":{\"no\":2,\"name\":\"Officials training Test event 00\",\"code\":\"BVISTEST\",\"countryCode\":\"CH\",\"startDate\":\"2025-09-04\",\"season\":\"2025\",\"gender\":0,\"type\":35,\"status\":6,\"noEvent\":343,\"title\":\"Beach Tournament Test 00\",\"version\":103897,\"startDateMainDraw\":\"2025-09-05\",\"endDateMainDraw\":\"2025-09-08\",\"startDateQualification\":\"2025-09-04\",\"endDateQualification\":\"2025-09-04\",\"nbTeamsMainDraw\":16,\"nbTeamsQualification\":16}}",
+  "parsed_record_count": 1,
+  "parsed_sample": [
+    {
+      "No": 2,
+      "Name": "Officials training Test event 00",
+      "Code": "BVISTEST",
+      "CountryCode": "CH",
+      "StartDate": "2025-09-04",
+      "Season": "2025",
+      "Gender": 0,
+      "Type": 35,
+      "Status": 6,
+      "NoEvent": 343,
+      "Title": "Beach Tournament Test 00",
+      "Version": 103897,
+      "StartDateMainDraw": "2025-09-05",
+      "EndDateMainDraw": "2025-09-08",
+      "StartDateQualification": "2025-09-04",
+      "EndDateQualification": "2025-09-04",
+      "NbTeamsMainDraw": 16,
+      "NbTeamsQualification": 16
+    }
+  ],
+  "_description": "Single beach tournament by No"
+}

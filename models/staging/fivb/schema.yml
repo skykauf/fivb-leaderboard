@@ -1,0 +1,119 @@
+# Staging layer: one-to-one from raw with explicit column list and tests
+version: 2
+models:
+  - name: stg_fivb_events
+    description: "FIVB events (e.g. World Tour, World Champs) – staging from raw.raw_fivb_events"
+    columns:
+      - name: event_id
+        description: "Unique event number (VIS No)"
+        test: unique
+      - name: code
+      - name: name
+      - name: start_date
+      - name: end_date
+      - name: ingested_at
+
+  - name: stg_fivb_tournaments
+    description: "Beach tournaments – staging from raw.raw_fivb_tournaments"
+    columns:
+      - name: tournament_id
+        description: "Unique tournament number (VIS No)"
+        test: unique
+      - name: name
+      - name: season
+      - name: gender
+      - name: start_date
+      - name: end_date
+      - name: country_code
+      - name: ingested_at
+
+  - name: stg_fivb_teams
+    description: "Beach teams (partnerships) – staging from raw.raw_fivb_teams"
+    columns:
+      - name: team_id
+        description: "Unique team number (VIS No)"
+        test: unique
+      - name: tournament_id
+      - name: player_a_id
+      - name: player_b_id
+      - name: country_code
+      - name: ingested_at
+
+  - name: stg_fivb_players
+    description: "Players – staging from raw.raw_fivb_players"
+    columns:
+      - name: player_id
+        description: "Unique player number (VIS No)"
+        test: unique
+      - name: full_name
+      - name: gender
+      - name: birth_date
+      - name: country_code
+      - name: ingested_at
+
+  - name: stg_fivb_matches
+    description: "Beach matches – staging from raw.raw_fivb_matches"
+    columns:
+      - name: match_id
+        description: "Unique match number (VIS No)"
+        test: unique
+      - name: tournament_id
+      - name: round_code
+        description: "Round code or id (e.g. PA, QF) from raw round field"
+      - name: team1_id
+      - name: team2_id
+      - name: winner_team_id
+      - name: played_at
+      - name: ingested_at
+
+  - name: stg_fivb_results
+    description: "Tournament finishing positions (GetBeachTournamentRanking) – staging from raw.raw_fivb_results"
+    columns:
+      - name: tournament_id
+      - name: team_id
+      - name: finishing_pos
+      - name: ingested_at
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - tournament_id
+              - team_id
+
+  - name: stg_fivb_rounds
+    description: "Tournament round structure (pools, elimination) – staging from raw.raw_fivb_rounds"
+    columns:
+      - name: round_id
+        description: "Unique round number (VIS No)"
+        test: unique
+      - name: tournament_id
+      - name: code
+        description: "Round code (e.g. PA, PB, QF, SF, F1)"
+      - name: name
+        description: "Human-readable round name (e.g. Pool A, Quarterfinals)"
+      - name: bracket
+      - name: phase
+      - name: start_date
+      - name: end_date
+      - name: rank_method
+      - name: ingested_at
+
+  - name: stg_fivb_team_rankings
+    description: "World Tour and Olympic selection rankings (M/W) – staging from raw.raw_fivb_team_rankings"
+    columns:
+      - name: ranking_type
+      - name: snapshot_date
+      - name: gender
+      - name: position
+      - name: no_player1
+      - name: no_player2
+      - name: team_name
+      - name: ingested_at
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - ranking_type
+              - snapshot_date
+              - gender
+              - position

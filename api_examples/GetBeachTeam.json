@@ -1,0 +1,32 @@
+{
+  "request_type": "GetBeachTeam",
+  "request_xml": "<Requests><Request Type=\"GetBeachTeam\" Fields=\"No NoTournament NoPlayer1 NoPlayer2 Name CountryCode ConfederationCode Status Rank EarnedPointsTeam EarnedPointsPlayer PositionInMainDraw PositionInQualification IsInMainDraw IsInQualification TournamentName TournamentTitle\" No=\"1\" /></Requests>",
+  "request_url": "https://www.fivb.org/Vis2009/XmlRequest.asmx",
+  "response_status_code": 200,
+  "response_content_type": "application/xml",
+  "response_text": "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?><Responses><BeachTeam No=\"1\" NoTournament=\"21\" NoPlayer1=\"100047\" NoPlayer2=\"117538\" Name=\"Prokopiev/Kuzmichev\" CountryCode=\"MX\" ConfederationCode=\"CEV\" Status=\"1\" Rank=\"\" EarnedPointsTeam=\"\" EarnedPointsPlayer=\"\" PositionInMainDraw=\"\" PositionInQualification=\"\" IsInMainDraw=\"0\" IsInQualification=\"0\" TournamentName=\"Acapulco\" TournamentTitle=\"\" Version=\"3091426\"/></Responses>",
+  "parsed_record_count": 1,
+  "parsed_sample": [
+    {
+      "No": "1",
+      "NoTournament": "21",
+      "NoPlayer1": "100047",
+      "NoPlayer2": "117538",
+      "Name": "Prokopiev/Kuzmichev",
+      "CountryCode": "MX",
+      "ConfederationCode": "CEV",
+      "Status": "1",
+      "Rank": "",
+      "EarnedPointsTeam": "",
+      "EarnedPointsPlayer": "",
+      "PositionInMainDraw": "",
+      "PositionInQualification": "",
+      "IsInMainDraw": "0",
+      "IsInQualification": "0",
+      "TournamentName": "Acapulco",
+      "TournamentTitle": "",
+      "Version": "3091426"
+    }
+  ],
+  "_description": "Single beach team by No"
+}

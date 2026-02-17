@@ -1,0 +1,37 @@
+{
+  "request_type": "GetBeachTournamentRanking",
+  "request_xml": "<Requests><Request Type=\"GetBeachTournamentRanking\" Fields=\"Rank Position NoTeam\" No=\"2\" Phase=\"MainDraw\" /></Requests>",
+  "request_url": "https://www.fivb.org/Vis2009/XmlRequest.asmx",
+  "response_status_code": 200,
+  "response_content_type": "application/xml",
+  "response_text": "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?><Responses><BeachTournamentRanking>\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"1\" Rank=\"1\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"2\" Rank=\"2\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"3\" Rank=\"3\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"4\" Rank=\"4\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"5\" Rank=\"5\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"6\" Rank=\"-5\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"7\" Rank=\"-5\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"8\" Rank=\"-5\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"9\" Rank=\"9\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"10\" Rank=\"-9\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"11\" Rank=\"-9\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"12\" Rank=\"-9\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"13\" Rank=\"13\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"14\" Rank=\"-13\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"15\" Rank=\"-13\" />\r\n  <BeachTournamentRankingEntry NoTeam=\"0\" Position=\"16\" Rank=\"-13\" />\r\n</BeachTournamentRanking></Responses>",
+  "parsed_record_count": 16,
+  "parsed_sample": [
+    {
+      "NoTeam": "0",
+      "Position": "1",
+      "Rank": "1"
+    },
+    {
+      "NoTeam": "0",
+      "Position": "2",
+      "Rank": "2"
+    },
+    {
+      "NoTeam": "0",
+      "Position": "3",
+      "Rank": "3"
+    },
+    {
+      "NoTeam": "0",
+      "Position": "4",
+      "Rank": "4"
+    },
+    {
+      "NoTeam": "0",
+      "Position": "5",
+      "Rank": "5"
+    }
+  ],
+  "_description": "Tournament finishing positions (Phase: Qualification | MainDraw)"
+}

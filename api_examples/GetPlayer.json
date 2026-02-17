@@ -1,0 +1,31 @@
+{
+  "request_type": "GetPlayer",
+  "request_xml": "<Requests><Request Type=\"GetPlayer\" Fields=\"No FederationCode FirstName LastName Gender Nationality NationalityCode BirthDate BirthPlace Height Weight PlaysBeach PlaysVolley TeamName CountryCode ConfederationCode ActiveBeach ActiveVolley\" No=\"10001\" /></Requests>",
+  "request_url": "https://www.fivb.org/Vis2009/XmlRequest.asmx",
+  "response_status_code": 200,
+  "response_content_type": "application/xml",
+  "response_text": "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?><Responses><Player No=\"10001\" FederationCode=\"ITA\" FirstName=\"Katarina\" LastName=\"Bulovic\" Gender=\"1\" NationalityCode=\"IT\" Birthdate=\"2002-01-19\" BirthPlace=\"TN\" Height=\"\" Weight=\"\" PlaysBeach=\"0\" PlaysVolley=\"1\" TeamName=\"Bulovic\" ConfederationCode=\"CEV\" ActiveBeach=\"0\" ActiveVolley=\"1\" Version=\"1140428\"/></Responses>",
+  "parsed_record_count": 1,
+  "parsed_sample": [
+    {
+      "No": "10001",
+      "FederationCode": "ITA",
+      "FirstName": "Katarina",
+      "LastName": "Bulovic",
+      "Gender": "1",
+      "NationalityCode": "IT",
+      "Birthdate": "2002-01-19",
+      "BirthPlace": "TN",
+      "Height": "",
+      "Weight": "",
+      "PlaysBeach": "0",
+      "PlaysVolley": "1",
+      "TeamName": "Bulovic",
+      "ConfederationCode": "CEV",
+      "ActiveBeach": "0",
+      "ActiveVolley": "1",
+      "Version": "1140428"
+    }
+  ],
+  "_description": "Single player by No (old-style wrapper required)"
+}

@@ -1,0 +1,72 @@
+{
+  "request_type": "GetBeachRoundList",
+  "request_xml": "<Requests><Request Type=\"GetBeachRoundList\" Fields=\"No NoTournament NoInTournament Code Name Bracket Phase StartDate EndDate Version RankMethod\"><Filter NoTournament=\"2\" /></Request></Requests>",
+  "request_url": "https://www.fivb.org/Vis2009/XmlRequest.asmx",
+  "response_status_code": 200,
+  "response_content_type": "application/xml",
+  "response_text": "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?><Responses><BeachRounds NbItems=\"11\" Version=\"358689\">\r\n  <BeachRound No=\"335652\" NoTournament=\"2\" Code=\"I\" Name=\"Round 1\" Bracket=\"W\" Phase=\"3\" StartDate=\"2025-09-04\" EndDate=\"2025-09-04\" Version=\"353196\" RankMethod=\"&lt;DirectElimination /&gt;\" />\r\n  <BeachRound No=\"335653\" NoTournament=\"2\" Code=\"II\" Name=\"Round 2\" Bracket=\"W\" Phase=\"3\" StartDate=\"2025-09-04\" EndDate=\"2025-09-04\" Version=\"353196\" RankMethod=\"&lt;DirectElimination /&gt;\" />\r\n  <BeachRound No=\"335654\" NoTournament=\"2\" Code=\"PA\" Name=\"Pool A\" Bracket=\"A\" Phase=\"4\" StartDate=\"2025-09-05\" EndDate=\"2025-09-05\" Version=\"353246\" RankMethod=\"&lt;Ranked /&gt;\" />\r\n  <BeachRound No=\"335655\" NoTournament=\"2\" Code=\"PB\" Name=\"Pool B\" Bracket=\"B\" Phase=\"4\" StartDate=\"2025-09-05\" EndDate=\"2025-09-05\" Version=\"353246\" RankMethod=\"&lt;Ranked /&gt;\" />\r\n  <BeachRound No=\"335656\" NoTournament=\"2\" Code=\"PC\" Name=\"Pool C\" Bracket=\"C\" Phase=\"4\" StartDate=\"2025-09-05\" EndDate=\"2025-09-05\" Version=\"353246\" RankMethod=\"&lt;Ranked /&gt;\" />\r\n  <BeachRound No=\"335657\" NoTournament=\"2\" Code=\"PD\" Name=\"Pool D\" Bracket=\"D\" Phase=\"4\" StartDate=\"2025-09-05\" EndDate=\"2025-09-05\" Version=\"353246\" RankMethod=\"&lt;Ranked /&gt;\" />\r\n  <BeachRound No=\"335658\" NoTournament=\"2\" Code=\"R12\" Name=\"Round of 12\" Bracket=\"W\" Phase=\"4\" StartDate=\"2025-09-06\" EndDate=\"2025-09-06\" Version=\"353207\" RankMethod=\"&lt;DirectElimination /&gt;\" />\r\n  <BeachRound No=\"335659\" NoTournament=\"2\" Code=\"QF\" Name=\"Quarterfinals\" Bracket=\"W\" Phase=\"4\" StartDate=\"2025-09-06\" EndDate=\"2025-09-06\" Version=\"353207\" RankMethod=\"&lt;DirectElimination /&gt;\" />\r\n  <BeachRound No=\"335660\" NoTournament=\"2\" Code=\"SF\" Name=\"Semifinals\" Bracket=\"S\" Phase=\"4\" StartDate=\"2025-09-07\" EndDate=\"2025-09-07\" Version=\"353207\" RankMethod=\"&lt;DirectElimination /&gt;\" />\r\n  <BeachRound No=\"335661\" NoTournament=\"2\" Code=\"F3\" Name=\"Final 3rd Place\" Bracket=\"F\" Phase=\"4\" StartDate=\"2025-09-07\" EndDate=\"2025-09-07\" Version=\"353207\" RankMethod=\"&lt;DirectElimination /&gt;\" />\r\n  <BeachRound No=\"335662\" NoTournament=\"2\" Code=\"F1\" Name=\"Final 1st Place\" Bracket=\"F\" Phase=\"4\" StartDate=\"2025-09-07\" EndDate=\"2025-09-07\" Version=\"353207\" RankMethod=\"&lt;DirectElimination /&gt;\" />\r\n</BeachRounds></Responses>",
+  "parsed_record_count": 11,
+  "parsed_sample": [
+    {
+      "No": "335652",
+      "NoTournament": "2",
+      "Code": "I",
+      "Name": "Round 1",
+      "Bracket": "W",
+      "Phase": "3",
+      "StartDate": "2025-09-04",
+      "EndDate": "2025-09-04",
+      "Version": "353196",
+      "RankMethod": "<DirectElimination />"
+    },
+    {
+      "No": "335653",
+      "NoTournament": "2",
+      "Code": "II",
+      "Name": "Round 2",
+      "Bracket": "W",
+      "Phase": "3",
+      "StartDate": "2025-09-04",
+      "EndDate": "2025-09-04",
+      "Version": "353196",
+      "RankMethod": "<DirectElimination />"
+    },
+    {
+      "No": "335654",
+      "NoTournament": "2",
+      "Code": "PA",
+      "Name": "Pool A",
+      "Bracket": "A",
+      "Phase": "4",
+      "StartDate": "2025-09-05",
+      "EndDate": "2025-09-05",
+      "Version": "353246",
+      "RankMethod": "<Ranked />"
+    },
+    {
+      "No": "335655",
+      "NoTournament": "2",
+      "Code": "PB",
+      "Name": "Pool B",
+      "Bracket": "B",
+      "Phase": "4",
+      "StartDate": "2025-09-05",
+      "EndDate": "2025-09-05",
+      "Version": "353246",
+      "RankMethod": "<Ranked />"
+    },
+    {
+      "No": "335656",
+      "NoTournament": "2",
+      "Code": "PC",
+      "Name": "Pool C",
+      "Bracket": "C",
+      "Phase": "4",
+      "StartDate": "2025-09-05",
+      "EndDate": "2025-09-05",
+      "Version": "353246",
+      "RankMethod": "<Ranked />"
+    }
+  ],
+  "_description": "List rounds for a tournament"
+}

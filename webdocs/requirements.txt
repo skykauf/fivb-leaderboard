@@ -1,0 +1,6 @@
+# Swagger webdocs server (run from project root: pip install -r webdocs/requirements.txt)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+requests>=2.28.0
+httpx>=0.24.0

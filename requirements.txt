@@ -1,0 +1,9 @@
+dbt-postgres>=1.8.0,<2.0.0
+requests>=2.32.0,<3.0.0
+SQLAlchemy>=2.0.0,<3.0.0
+psycopg2-binary>=2.9.0,<3.0.0
+python-dotenv>=1.0.0,<2.0.0
+pytest>=7.0.0,<9.0.0
+tqdm>=4.66.0,<5.0.0
+
+

@@ -1,0 +1,26 @@
+# Environment and secrets
+.env
+.env.local
+*.env
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# dbt
+target/
+dbt_packages/
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Generated VIS response dumps (scripts/inspect_vis_responses.py)
+scripts/vis_responses/

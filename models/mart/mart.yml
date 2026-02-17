@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: mart_match_summary
+    description: |
+      Flattened match-level table with full metadata: one row per match including
+      tournament (name, season, tier, city, country, dates, gender), both teams'
+      player names and countries, scores, duration, phase, round, and winner.
+    columns:
+      - name: fivb_match_id
+        description: FIVB match identifier.
+      - name: fivb_tournament_id
+        description: Tournament where the match was played.
+      - name: tournament_name
+        description: Tournament display name.
+      - name: tournament_season
+        description: Season (e.g. year) of the tournament.
+      - name: team1_player_a_name
+        description: Full name of team 1 player A.
+      - name: team1_player_b_name
+        description: Full name of team 1 player B.
+      - name: team2_player_a_name
+        description: Full name of team 2 player A.
+      - name: team2_player_b_name
+        description: Full name of team 2 player B.
+      - name: fivb_winner_team_id
+        description: FIVB team id of the winning team.
+
+  - name: mart_team_result_summary
+    description: |
+      Flattened team result per tournament: one row per team per tournament with
+      finishing position, points, prize money, full tournament metadata, and both
+      players' names, countries, and profile attributes.
+    columns:
+      - name: tournament_id
+        description: FIVB tournament identifier.
+      - name: team_id
+        description: FIVB team identifier.
+      - name: finishing_pos
+        description: Final position in the tournament.
+      - name: result_points
+        description: Points earned at this tournament.
+      - name: player_a_name
+        description: Full name of player A.
+      - name: player_b_name
+        description: Full name of player B.
+
+  - name: mart_player_ranking_summary
+    description: |
+      Ranking snapshots with full player metadata: one row per player per
+      ranking type per snapshot date, with rank, points, and player attributes
+      (name, country, gender, birth_date, height, profile_url).
+    columns:
+      - name: ranking_type
+        description: Type of ranking (e.g. world ranking).
+      - name: snapshot_date
+        description: Date of the ranking snapshot.
+      - name: fivb_player_id
+        description: FIVB player identifier.
+      - name: rank
+        description: Rank at snapshot date.
+      - name: points
+        description: Ranking points at snapshot date.
+      - name: full_name
+        description: Player full name.

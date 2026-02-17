@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "dbt": {
+      "command": "uvx",
+      "args": ["dbt-mcp"],
+      "env": {
+        "DBT_PROJECT_DIR": "<REPO_ROOT>",
+        "DBT_PATH": "<PATH_TO_DBT_EXE>"
+      }
+    }
+  }
+}

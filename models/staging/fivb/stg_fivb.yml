@@ -1,0 +1,54 @@
+version: 2
+
+sources:
+  - name: raw_fivb
+    schema: raw
+    tables:
+      - name: players
+        identifier: raw_fivb_players
+      - name: teams
+        identifier: raw_fivb_teams
+      - name: tournaments
+        identifier: raw_fivb_tournaments
+      - name: matches
+        identifier: raw_fivb_matches
+      - name: results
+        identifier: raw_fivb_results
+
+models:
+  - name: stg_fivb_players
+    description: "Staging model for FIVB players, cleaned and typed."
+    columns:
+      - name: fivb_player_id
+        tests: [not_null, unique]
+      - name: full_name
+        tests: [not_null]
+
+  - name: stg_fivb_teams
+    description: "Staging model for FIVB teams/partnerships."
+    columns:
+      - name: fivb_team_id
+        tests: [not_null, unique]
+
+  - name: stg_fivb_tournaments
+    description: "Staging model for FIVB tournaments."
+    columns:
+      - name: fivb_tournament_id
+        tests: [not_null, unique]
+
+  - name: stg_fivb_matches
+    description: "Staging model for FIVB matches."
+    columns:
+      - name: fivb_match_id
+        tests: [not_null, unique]
+
+  - name: stg_fivb_rankings
+    description: "Staging model for FIVB ranking snapshots, built from GetBeachTournamentRanking (raw_fivb_results). One row per player per snapshot_date; rank = tournament finishing position."
+    columns:
+      - name: ranking_type
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: fivb_player_id
+        tests: [not_null]
+

@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: dim_player
+    description: "Dimension table for FIVB beach volleyball players."
+    columns:
+      - name: player_id
+        tests: [not_null, unique, dbt_utils.at_least_one]
+      - name: full_name
+        tests: [not_null]
+      - name: primary_country
+
+  - name: dim_team
+    description: "Dimension table for FIVB teams/partnerships."
+    columns:
+      - name: team_id
+        tests: [not_null, unique, dbt_utils.at_least_one]
+      - name: tournament_id
+      - name: player_a_id
+        tests: [not_null]
+      - name: player_b_id
+        tests: [not_null]
+      - name: status
+
+  - name: dim_tournament
+    description: "Dimension table for FIVB tournaments."
+    columns:
+      - name: tournament_id
+        tests: [not_null, unique, dbt_utils.at_least_one]
+      - name: name
+        tests: [not_null]
+      - name: season
+      - name: country_name
+      - name: gender
+      - name: status
+
+  - name: fact_match
+    description: "Fact table at the grain of one match per row."
+    columns:
+      - name: match_id
+        tests: [not_null, unique, dbt_utils.at_least_one]
+      - name: tournament_id
+        tests:
+          - not_null
+      - name: team1_id
+      - name: team2_id
+      - name: winner_team_id
+      - name: result_type
+      - name: status
+
+  - name: fact_result
+    description: "Fact table at the grain of team x tournament, with final position and points."
+    columns:
+      - name: tournament_id
+        tests:
+          - not_null
+          - dbt_utils.at_least_one:
+              severity: warn
+      - name: team_id
+        tests: [not_null]
+
+  - name: fact_ranking_snapshot
+    description: "Fact table of player ranking snapshots over time."
+    columns:
+      - name: ranking_type
+        tests:
+          - not_null
+          - dbt_utils.at_least_one:
+              severity: warn
+      - name: snapshot_date
+        tests: [not_null]
+      - name: player_id
+        tests: [not_null]
+

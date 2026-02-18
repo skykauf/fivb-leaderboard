@@ -1,6 +1,42 @@
 # Marts: analytics-ready datasets
 version: 2
 models:
+  - name: match_mart
+    description: "One row per match with full tournament, round, team, player, ranking, and standings metadata."
+    columns:
+      - name: match_id
+        description: "Unique match identifier (VIS No)."
+        tests:
+          - dbt_utils.at_least_one
+      - name: tournament_id
+      - name: played_at
+      - name: tournament_name
+      - name: season
+      - name: tournament_gender
+      - name: tournament_tier
+      - name: tournament_start_date
+      - name: tournament_end_date
+      - name: tournament_city
+      - name: tournament_country_code
+      - name: tournament_country_name
+      - name: tournament_season_year
+      - name: tournament_is_major
+      - name: round_name
+      - name: round_bracket
+      - name: round_phase
+      - name: team1_display_name
+      - name: team2_display_name
+      - name: team1_ranking_position
+      - name: team2_ranking_position
+      - name: team1_finishing_pos
+        description: "Team1's finishing position in this tournament (null if not in standings)."
+      - name: team2_finishing_pos
+        description: "Team2's finishing position in this tournament (null if not in standings)."
+      - name: is_winner_team1
+      - name: is_final
+      - name: is_pool_phase
+      - name: higher_seed_won
+
   - name: champion_mart
     description: "One row per tournament champion with full tournament, team, final match, and ranking-at-event context."
     columns:

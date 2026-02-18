@@ -83,6 +83,8 @@ select
     t2.team_display_name as team2_display_name,
     t1.country_code as team1_country_code,
     t2.country_code as team2_country_code,
+    r1.team1_ranking_position,
+    r2.team2_ranking_position,
     -- derived
     (m.winner_team_id = m.team1_id) as is_winner_team1,
     lower(coalesce(r.phase, m.phase, '')) in ('final', 'finals', 'gold medal match') as is_final,

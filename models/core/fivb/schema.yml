@@ -41,6 +41,10 @@ models:
         description: "True for final / gold medal match."
       - name: is_pool_phase
         description: "True for pool play rounds."
+      - name: team1_ranking_position
+        description: "Team1 world ranking position as of match date (null if not ranked)."
+      - name: team2_ranking_position
+        description: "Team2 world ranking position as of match date (null if not ranked)."
       - name: higher_seed_won
         description: "True when the team with the better (lower) world ranking position won the match; null if either team has no ranking or there is no winner."
 

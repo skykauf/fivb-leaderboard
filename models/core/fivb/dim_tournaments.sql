@@ -19,7 +19,8 @@ select
     t.timezone,
     -- derived
     (t.end_date - t.start_date + 1)::int as duration_days,
-    nullif(regexp_replace(t.season, '\D', '', 'g'), '')::int as season_year,
+    -- Use start year for ranges (e.g. "1995-96" → 1995, "1987-91" → 1987); single year unchanged
+    nullif(regexp_replace(split_part(t.season, '-', 1), '\D', '', 'g'), '')::int as season_year,
     case
         when t.tier in ('World Championship', 'Olympic Games') then true
         else false

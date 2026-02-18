@@ -20,7 +20,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 from sqlalchemy import text
 
 from etl.db import get_engine
@@ -51,7 +50,7 @@ def _tables(schema: str) -> list[str]:
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = :schema
-        AND table_type = 'BASE TABLE'
+        AND table_type IN ('BASE TABLE', 'VIEW')
         ORDER BY table_name
     """)
     with engine.connect() as conn:
@@ -74,7 +73,7 @@ def _row_count(schema: str, table: str) -> int | None:
 
 @st.cache_data(ttl=60)
 def _team_list() -> list[str]:
-    """Distinct team display names from core (for Performance tab)."""
+    """Distinct team display names from core (for Team Performance tab)."""
     engine = _engine()
     if engine is None:
         return []
@@ -88,6 +87,26 @@ def _team_list() -> list[str]:
         with engine.connect() as conn:
             rows = conn.execute(q).fetchall()
         return [r[0] for r in rows]
+    except Exception:
+        return []
+
+
+@st.cache_data(ttl=60)
+def _player_list() -> list[tuple[int, str]]:
+    """(player_id, full_name) from staging for Player Performance tab."""
+    engine = _engine()
+    if engine is None:
+        return []
+    try:
+        q = text("""
+            SELECT player_id, full_name
+            FROM staging.stg_fivb_players
+            WHERE full_name IS NOT NULL
+            ORDER BY full_name
+        """)
+        with engine.connect() as conn:
+            rows = conn.execute(q).fetchall()
+        return [(r[0], r[1]) for r in rows]
     except Exception:
         return []
 
@@ -152,16 +171,84 @@ def _performance_by_host_country(team_display_name: str) -> pd.DataFrame | None:
         return None
 
 
+@st.cache_data(ttl=60)
+def _performance_by_host_country_player(player_id: int) -> pd.DataFrame | None:
+    """Wins, losses, and average tournament finish position by tournament host country (player level)."""
+    engine = _engine()
+    if engine is None:
+        return None
+    try:
+        q = text("""
+            WITH player_teams AS (
+                SELECT team_id, tournament_id
+                FROM core.dim_team_tournaments
+                WHERE player_a_id = :player_id OR player_b_id = :player_id
+            ),
+            matches_with_host AS (
+                SELECT
+                    m.tournament_id,
+                    dt.country_code AS host_country,
+                    dt.country_name AS host_country_name,
+                    (pt.team_id = m.team1_id AND m.is_winner_team1) OR (pt.team_id = m.team2_id AND (m.is_winner_team1 = false)) AS won
+                FROM core.fct_matches m
+                JOIN player_teams pt ON (m.team1_id = pt.team_id AND m.tournament_id = pt.tournament_id)
+                                 OR (m.team2_id = pt.team_id AND m.tournament_id = pt.tournament_id)
+                JOIN core.dim_tournaments dt ON dt.tournament_id = m.tournament_id
+            ),
+            wins_losses AS (
+                SELECT
+                    host_country,
+                    host_country_name,
+                    SUM(CASE WHEN won THEN 1 ELSE 0 END)::int AS wins,
+                    SUM(CASE WHEN NOT won THEN 1 ELSE 0 END)::int AS losses
+                FROM matches_with_host
+                GROUP BY host_country, host_country_name
+            ),
+            finish_by_tournament AS (
+                SELECT
+                    dt.country_code AS host_country,
+                    pt.tournament_id,
+                    s.finishing_pos
+                FROM player_teams pt
+                JOIN core.fct_tournament_standings s ON s.team_id = pt.team_id AND s.tournament_id = pt.tournament_id
+                JOIN core.dim_tournaments dt ON dt.tournament_id = pt.tournament_id
+                GROUP BY dt.country_code, dt.country_name, pt.tournament_id, s.finishing_pos
+            ),
+            avg_depth AS (
+                SELECT host_country, AVG(finishing_pos) AS avg_finish_pos
+                FROM finish_by_tournament
+                GROUP BY host_country
+            )
+            SELECT
+                wl.host_country,
+                wl.host_country_name,
+                wl.wins,
+                wl.losses,
+                wl.wins + wl.losses AS total_matches,
+                ROUND(ad.avg_finish_pos::numeric, 2) AS avg_finish_pos
+            FROM wins_losses wl
+            LEFT JOIN avg_depth ad ON ad.host_country = wl.host_country
+            ORDER BY wl.wins DESC, total_matches DESC, wl.host_country
+        """)
+        with engine.connect() as conn:
+            return pd.read_sql(q, conn, params={"player_id": player_id})
+    except Exception:
+        return None
+
+
 def _render_table_browser(engine) -> None:
     with st.sidebar:
         st.subheader("Table browser")
         schema = st.selectbox("Schema", options=SCHEMAS, index=0)
         table_names = _tables(schema)
         if not table_names:
-            st.info(f"No tables in schema `{schema}`. Run ETL/dbt to populate.")
+            hint = "Run ETL/dbt to populate."
+            if schema == "mart":
+                hint = "Run `dbt run --select mart` to build mart models (e.g. champion_mart)."
+            st.info(f"No tables or views in schema `{schema}`. {hint}")
             table_name = None
         else:
-            table_name = st.selectbox("Table", options=table_names, index=0)
+            table_name = st.selectbox("Table / view", options=table_names, index=0)
         st.divider()
         limit = st.number_input(
             "Max rows to load",
@@ -173,13 +260,13 @@ def _render_table_browser(engine) -> None:
         )
 
     if not table_name:
-        st.caption("Select a schema that has tables (e.g. run `python -m etl.load_raw` then `dbt run`).")
+        st.caption("Select a schema that has tables or views (e.g. run `python -m etl.load_raw` then `dbt run`).")
         return
 
     full_name = f'"{schema}"."{table_name}"'
     count = _row_count(schema, table_name)
     if count is not None:
-        st.caption(f"Table {full_name} — {count:,} rows")
+        st.caption(f"{full_name} — {count:,} rows")
 
     try:
         sql = text(f'SELECT * FROM {full_name} LIMIT :lim')
@@ -200,40 +287,16 @@ def _render_table_browser(engine) -> None:
         )
 
 
-def _render_performance_tab(engine) -> None:
-    st.subheader("Performance by tournament host country")
-    st.caption("Wins/losses and average tournament finish position (1 = champion) in tournaments hosted in each country.")
-    st.info("**Country** = tournament host country (where the event was held).")
-
-    teams = _team_list()
-    if not teams:
-        st.info("No teams in `core.dim_team_tournaments`. Run ETL and `dbt run` to populate core models.")
-        return
-
-    team = st.selectbox("Team", options=teams, index=0, help="Team display name (Player A / Player B)")
-
-    df = _performance_by_host_country(team)
-    if df is None:
-        st.error("Could not load performance data. Ensure core.fct_matches and core.fct_tournament_standings exist.")
-        return
-    if df.empty:
-        st.warning(f"No matches found for **{team}**.")
-        return
-
-    # Use country name for display when available
+def _render_performance_charts(df: pd.DataFrame, entity_label: str, download_key: str, download_filename: str) -> None:
+    """Shared charts and table for team or player performance by host country."""
     x_label = df["host_country_name"].fillna(df["host_country"]).tolist()
 
-    # Wins vs losses by tournament host country (grouped bar)
     fig_wl = go.Figure()
-    fig_wl.add_trace(
-        go.Bar(name="Wins", x=x_label, y=df["wins"], marker_color="#2ecc71")
-    )
-    fig_wl.add_trace(
-        go.Bar(name="Losses", x=x_label, y=df["losses"], marker_color="#e74c3c")
-    )
+    fig_wl.add_trace(go.Bar(name="Wins", x=x_label, y=df["wins"], marker_color="#2ecc71"))
+    fig_wl.add_trace(go.Bar(name="Losses", x=x_label, y=df["losses"], marker_color="#e74c3c"))
     fig_wl.update_layout(
         barmode="group",
-        title=f"Wins vs losses by tournament host country — {team}",
+        title=f"Wins vs losses by tournament host country — {entity_label}",
         xaxis_title="Tournament host country",
         yaxis_title="Matches",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -242,7 +305,6 @@ def _render_performance_tab(engine) -> None:
     )
     st.plotly_chart(fig_wl, use_container_width=True)
 
-    # Average tournament finish position (1 = champion; lower is better)
     fig_depth = px.bar(
         df.assign(host_label=x_label),
         x="host_label",
@@ -263,10 +325,60 @@ def _render_performance_tab(engine) -> None:
         st.download_button(
             label="Download as CSV",
             data=df.to_csv(index=False).encode("utf-8"),
-            file_name=f"performance_{team.replace(' / ', '_').replace(' ', '')[:50]}.csv",
+            file_name=download_filename,
             mime="text/csv",
-            key="perf_csv",
+            key=download_key,
         )
+
+
+def _render_team_performance_tab(engine) -> None:
+    st.subheader("Performance by tournament host country")
+    st.caption("Wins/losses and average tournament finish position (1 = champion) in tournaments hosted in each country.")
+    st.info("**Country** = tournament host country (where the event was held).")
+
+    teams = _team_list()
+    if not teams:
+        st.info("No teams in `core.dim_team_tournaments`. Run ETL and `dbt run` to populate core models.")
+        return
+
+    team = st.selectbox("Team", options=teams, index=0, help="Team display name (Player A / Player B)", key="team_sel")
+
+    df = _performance_by_host_country(team)
+    if df is None:
+        st.error("Could not load performance data. Ensure core.fct_matches and core.fct_tournament_standings exist.")
+        return
+    if df.empty:
+        st.warning(f"No matches found for **{team}**.")
+        return
+
+    _render_performance_charts(df, team, "perf_team_csv", f"performance_team_{team.replace(' / ', '_').replace(' ', '')[:40]}.csv")
+
+
+def _render_player_performance_tab(engine) -> None:
+    st.subheader("Performance by tournament host country")
+    st.caption("Wins/losses and average tournament finish position (1 = champion) in tournaments hosted in each country (player level).")
+    st.info("**Country** = tournament host country (where the event was held).")
+
+    players = _player_list()
+    if not players:
+        st.info("No players in `staging.stg_fivb_players`. Run ETL and `dbt run` to populate.")
+        return
+
+    # Show full_name in dropdown; store player_id for query
+    player_options = [p[1] for p in players]
+    player_id_by_name = {p[1]: p[0] for p in players}
+    player_name = st.selectbox("Player", options=player_options, index=0, key="player_sel")
+    player_id = player_id_by_name[player_name]
+
+    df = _performance_by_host_country_player(player_id)
+    if df is None:
+        st.error("Could not load performance data. Ensure core models exist.")
+        return
+    if df.empty:
+        st.warning(f"No matches found for **{player_name}**.")
+        return
+
+    _render_performance_charts(df, player_name, "perf_player_csv", f"performance_player_{player_name.replace(' ', '_')[:40]}.csv")
 
 
 def main() -> None:
@@ -277,13 +389,16 @@ def main() -> None:
     if engine is None:
         return
 
-    tab_browser, tab_perf = st.tabs(["Table browser", "Performance"])
+    tab_browser, tab_team, tab_player = st.tabs(["Table browser", "Team Performance", "Player Performance"])
 
     with tab_browser:
         _render_table_browser(engine)
 
-    with tab_perf:
-        _render_performance_tab(engine)
+    with tab_team:
+        _render_team_performance_tab(engine)
+
+    with tab_player:
+        _render_player_performance_tab(engine)
 
 
 if __name__ == "__main__":

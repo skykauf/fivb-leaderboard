@@ -130,6 +130,25 @@ def _bool_vis(value: Any) -> bool:
     return s in ("1", "true", "yes", "on")
 
 
+def _tournament_year(raw: Dict[str, Any]) -> int | None:
+    """Infer tournament year from Season or StartDate/EndDate for filtering."""
+    season = raw.get("Season")
+    if season is not None:
+        try:
+            y = int(season)
+            if 1900 <= y <= 2100:
+                return y
+        except (TypeError, ValueError):
+            pass
+    start = _date_or_none(raw.get("StartDate"))
+    if start is not None:
+        return start.year
+    end = _date_or_none(raw.get("EndDate"))
+    if end is not None:
+        return end.year
+    return None
+
+
 # ---- Events ----
 def _normalize_event(raw: Dict[str, Any]) -> Dict[str, Any]:
     return {
@@ -596,12 +615,18 @@ def run_full_ingestion(limits: IngestionLimits | None = None) -> None:
     to_process = tournaments
     if limits.tournaments is not None and limits.tournaments > 0:
         to_process = tournaments[: limits.tournaments]
+    # Only expand (results/rounds) for tournaments from 2022 onwards
+    MIN_EXPAND_YEAR = 2022
     tournament_ids = []
     for t in to_process:
         no = _int_or_none(t.get("No"))
-        if no is not None:
-            tournament_ids.append(no)
-    print(f"  Will process {len(tournament_ids)} tournaments for matches/results/rounds")
+        if no is None:
+            continue
+        year = _tournament_year(t)
+        if year is not None and year < MIN_EXPAND_YEAR:
+            continue
+        tournament_ids.append(no)
+    print(f"  Will process {len(tournament_ids)} tournaments for matches/results/rounds (from {MIN_EXPAND_YEAR} onwards)")
 
     # 3. Teams
     print("\n3. GetBeachTeamList")

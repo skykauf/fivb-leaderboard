@@ -316,7 +316,7 @@ def _render_performance_charts(df: pd.DataFrame, entity_label: str, download_key
         color_continuous_midpoint=8,
     )
     fig_depth.update_layout(height=400, margin=dict(t=60), showlegend=False)
-    fig_depth.update_xaxis(tickangle=-45)
+    fig_depth.update_xaxes(tickangle=-45)
     st.plotly_chart(fig_depth, use_container_width=True)
 
     with st.expander("Data table"):

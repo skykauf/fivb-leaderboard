@@ -37,6 +37,59 @@ models:
       - name: is_pool_phase
       - name: higher_seed_won
 
+  - name: tournament_mart
+    description: "One row per tournament + team with final ranking, tournament/team metadata, and sum of opponents' standings points that this team beat (performance beyond final position)."
+    columns:
+      - name: tournament_id
+        description: "Unique tournament identifier (VIS No)."
+        tests:
+          - dbt_utils.at_least_one
+      - name: team_id
+        description: "Team identifier for this tournament."
+      - name: tournament_name
+      - name: season
+      - name: season_year
+      - name: tournament_tier
+      - name: tournament_gender
+      - name: tournament_start_date
+      - name: tournament_end_date
+      - name: tournament_duration_days
+      - name: tournament_city
+      - name: tournament_country_code
+      - name: tournament_country_name
+      - name: tournament_is_major
+      - name: team_display_name
+      - name: team_country_code
+      - name: finishing_pos
+        description: "Team's final position in this tournament (1 = champion)."
+      - name: tournament_points
+        description: "Points earned at this tournament (from standings)."
+      - name: prize_money
+      - name: entry_ranking_position
+      - name: entry_ranking_points
+      - name: is_podium
+      - name: is_champion
+      - name: sum_opponent_points_beaten
+        description: "Sum of standings points of opponents this team beat (from GetBeachTournamentRanking Points). Null when points are missing from the API."
+      - name: matches_played
+        description: "Number of matches this team played in this tournament."
+      - name: match_wins
+        description: "Number of matches won."
+      - name: match_losses
+        description: "Number of matches lost (excludes matches with no winner)."
+      - name: wins_vs_higher_seed
+        description: "Wins against a team with a better (lower) world ranking at match time (upsets)."
+      - name: losses_vs_lower_seed
+        description: "Losses against a team with a worse (higher) world ranking at match time."
+      - name: pool_wins
+        description: "Wins in pool play."
+      - name: elimination_wins
+        description: "Wins in bracket/elimination play (non-pool)."
+      - name: quality_win_loss_score
+        description: "Tournament-wide scaled metric: beating a good team adds more, beating a bad team adds less; losing to a good team subtracts less, losing to a bad team subtracts more. Uses opponent finishing position (1=champion). Score is sum of per-match contributions; comparable across tournaments of same size."
+      - name: quality_win_loss_score_points
+        description: "Same logic as quality_win_loss_score but uses opponent entry_ranking_points (normalized by max in tournament). Beat high-points opponent = big +, lose to low-points = big -."
+
   - name: champion_mart
     description: "One row per tournament champion with full tournament, team, final match, and ranking-at-event context."
     columns:

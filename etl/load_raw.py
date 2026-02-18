@@ -638,8 +638,8 @@ def run_full_ingestion(limits: IngestionLimits | None = None) -> None:
     to_process = tournaments
     if limits.tournaments is not None and limits.tournaments > 0:
         to_process = tournaments[: limits.tournaments]
-    # Only expand (results/rounds) for tournaments from 2022 onwards
-    MIN_EXPAND_YEAR = 2022
+    # Only expand (results/rounds) for tournaments from 2015 onwards
+    MIN_EXPAND_YEAR = 2015
     tournament_ids = []
     for t in to_process:
         no = _int_or_none(t.get("No"))
@@ -740,4 +740,5 @@ def run_full_ingestion(limits: IngestionLimits | None = None) -> None:
 
 
 if __name__ == "__main__":
-    run_full_ingestion(limits=IngestionLimits.from_env())
+    # run_full_ingestion(limits=IngestionLimits.from_env())
+    pass

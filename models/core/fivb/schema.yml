@@ -57,14 +57,15 @@ models:
       - name: team_id
       - name: finishing_pos
       - name: points
-        description: "Points earned at this tournament (from GetBeachTournamentRanking)."
+        description: "Points earned at this tournament (from GetBeachTournamentRanking). Often null because the FIVB API does not populate Points for many tournaments."
       - name: prize_money
+        description: "Prize money for this finish (from GetBeachTournamentRanking). Often null; API rarely returns PrizeMoney."
       - name: entry_ranking_position
-        description: "Team's World Tour ranking position as of tournament start (for seeding context)."
+        description: "Team's World Tour ranking position as of tournament start (for seeding context). Null when no ranking snapshot exists on or before tournament start (ETL only loads rankings for snapshot_date = today)."
       - name: entry_ranking_points
-        description: "Team's World Tour earned points as of tournament start (entry seeding)."
+        description: "Team's World Tour earned points as of tournament start (entry seeding). Null for same reason as entry_ranking_position."
       - name: entry_ranking_snapshot_date
-        description: "Date of the ranking snapshot used for entry_ranking_*."
+        description: "Date of the ranking snapshot used for entry_ranking_*. Null when no snapshot on or before tournament start."
       - name: is_podium
         description: "True when finishing_pos <= 3."
       - name: is_champion

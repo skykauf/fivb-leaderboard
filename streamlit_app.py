@@ -172,6 +172,47 @@ def _performance_by_host_country(team_display_name: str) -> pd.DataFrame | None:
 
 
 @st.cache_data(ttl=60)
+def _tournament_mart_df() -> pd.DataFrame | None:
+    """Load mart.tournament_mart for performance-over-time charts."""
+    engine = _engine()
+    if engine is None:
+        return None
+    try:
+        q = text("""
+            SELECT
+                tournament_id,
+                team_id,
+                team_display_name,
+                tournament_name,
+                tournament_country_code,
+                tournament_country_name,
+                season,
+                season_year,
+                tournament_start_date,
+                tournament_tier,
+                tournament_gender,
+                tournament_is_major,
+                finishing_pos,
+                tournament_points,
+                sum_opponent_points_beaten,
+                match_wins,
+                match_losses,
+                wins_vs_higher_seed,
+                losses_vs_lower_seed,
+                pool_wins,
+                elimination_wins,
+                quality_win_loss_score,
+                quality_win_loss_score_points
+            FROM mart.tournament_mart
+            ORDER BY tournament_start_date, team_display_name
+        """)
+        with engine.connect() as conn:
+            return pd.read_sql(q, conn)
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=60)
 def _performance_by_host_country_player(player_id: int) -> pd.DataFrame | None:
     """Wins, losses, and average tournament finish position by tournament host country (player level)."""
     engine = _engine()
@@ -309,7 +350,7 @@ def _render_performance_charts(df: pd.DataFrame, entity_label: str, download_key
         df.assign(host_label=x_label),
         x="host_label",
         y="avg_finish_pos",
-        title="Average tournament finish position in events hosted in this country (1 = champion)",
+        title="Average tournament finish position in events hosted in this country",
         labels={"host_label": "Tournament host country", "avg_finish_pos": "Avg finish position"},
         color="avg_finish_pos",
         color_continuous_scale="RdYlGn_r",
@@ -333,7 +374,7 @@ def _render_performance_charts(df: pd.DataFrame, entity_label: str, download_key
 
 def _render_team_performance_tab(engine) -> None:
     st.subheader("Performance by tournament host country")
-    st.caption("Wins/losses and average tournament finish position (1 = champion) in tournaments hosted in each country.")
+    st.caption("Wins/losses and average tournament finish position in tournaments hosted in each country.")
     st.info("**Country** = tournament host country (where the event was held).")
 
     teams = _team_list()
@@ -356,7 +397,7 @@ def _render_team_performance_tab(engine) -> None:
 
 def _render_player_performance_tab(engine) -> None:
     st.subheader("Performance by tournament host country")
-    st.caption("Wins/losses and average tournament finish position (1 = champion) in tournaments hosted in each country (player level).")
+    st.caption("Wins/losses and average tournament finish position in tournaments hosted in each country (player level).")
     st.info("**Country** = tournament host country (where the event was held).")
 
     players = _player_list()
@@ -381,6 +422,135 @@ def _render_player_performance_tab(engine) -> None:
     _render_performance_charts(df, player_name, "perf_player_csv", f"performance_player_{player_name.replace(' ', '_')[:40]}.csv")
 
 
+# Metrics from tournament_mart for the Performance over time tab (column key -> label)
+PERFORMANCE_METRICS = {
+    "finishing_pos": "Finishing position",
+    "tournament_points": "Tournament points earned",
+    "sum_opponent_points_beaten": "Sum opponent points beaten",
+    "match_wins": "Match wins",
+    "match_losses": "Match losses",
+    "wins_vs_higher_seed": "Wins vs higher seed (upsets)",
+    "losses_vs_lower_seed": "Losses vs lower seed",
+    "pool_wins": "Pool wins",
+    "elimination_wins": "Elimination wins",
+    "quality_win_loss_score": "Quality win/loss score (by finish pos)",
+    "quality_win_loss_score_points": "Quality win/loss score (by entry points)",
+}
+
+
+def _render_performance_over_time_tab(engine) -> None:
+    st.subheader("Performance metrics across tournament time")
+    st.caption("Track team performance over seasons using metrics from **mart.tournament_mart**. Each point is one tournament appearance. Select one or more teams and metrics to compare.")
+
+    df = _tournament_mart_df()
+    if df is None:
+        st.error("Could not load **mart.tournament_mart**. Run `dbt run --select tournament_mart` to build it.")
+        return
+    if df.empty:
+        st.warning("**mart.tournament_mart** is empty. Run ETL and dbt to populate.")
+        return
+
+    teams = df["team_display_name"].dropna().unique().tolist()
+    teams_sorted = sorted([t for t in teams if t])
+    if not teams_sorted:
+        st.warning("No team names in tournament_mart.")
+        return
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        selected_teams = st.multiselect(
+            "Teams",
+            options=teams_sorted,
+            default=teams_sorted[:1] if teams_sorted else [],
+            help="Select one or more teams to compare.",
+        )
+    with c2:
+        selected_metrics = st.multiselect(
+            "Metrics",
+            options=list(PERFORMANCE_METRICS.keys()),
+            default=["finishing_pos", "quality_win_loss_score", "sum_opponent_points_beaten"],
+            format_func=lambda k: PERFORMANCE_METRICS[k],
+            help="Metrics to plot over time.",
+        )
+    with c3:
+        time_axis = st.radio(
+            "Time axis",
+            options=["tournament_start_date", "season_year"],
+            format_func=lambda x: "Tournament start date" if x == "tournament_start_date" else "Season year",
+            horizontal=True,
+        )
+        filter_major = st.checkbox("Majors only (World Champs / Olympics)", value=False, key="perf_major")
+        filter_gender = st.selectbox(
+            "Gender",
+            options=["All", "M", "W"],
+            index=0,
+            key="perf_gender",
+        )
+
+    if not selected_teams:
+        st.info("Select at least one team in the sidebar.")
+        return
+    if not selected_metrics:
+        st.info("Select at least one metric in the sidebar.")
+        return
+
+    sub = df[df["team_display_name"].isin(selected_teams)].copy()
+    if filter_major:
+        sub = sub[sub["tournament_is_major"] is True]
+    if filter_gender != "All":
+        sub = sub[sub["tournament_gender"] == filter_gender]
+
+    if sub.empty:
+        st.warning("No rows after filters. Try relaxing filters or choosing other teams.")
+        return
+
+    # Ensure time column for x-axis
+    if time_axis == "season_year":
+        sub = sub[sub["season_year"].notna()]
+        sub = sub.sort_values(["season_year", "tournament_start_date", "team_display_name"])
+        x_col = "season_year"
+    else:
+        sub = sub[sub["tournament_start_date"].notna()]
+        sub = sub.sort_values(["tournament_start_date", "team_display_name"])
+        x_col = "tournament_start_date"
+
+    if sub.empty:
+        st.warning("No rows with valid time axis. Check season_year / tournament_start_date.")
+        return
+
+    for metric in selected_metrics:
+        if metric not in sub.columns:
+            continue
+        title = PERFORMANCE_METRICS.get(metric, metric)
+        hover_cols = [c for c in ["tournament_name", "tournament_country_name", "tournament_country_code"] if c in sub.columns]
+        fig = px.line(
+            sub,
+            x=x_col,
+            y=metric,
+            color="team_display_name",
+            title=title,
+            labels={x_col: "Season year" if x_col == "season_year" else "Tournament start", metric: title},
+            markers=True,
+            hover_data=hover_cols,
+        )
+        fig.update_layout(height=400, legend=dict(orientation="h", yanchor="bottom", y=1.02), margin=dict(t=50))
+        if x_col == "season_year":
+            fig.update_xaxes(dtick=1)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("Data table (filtered)"):
+        show_cols = [x_col, "team_display_name", "tournament_name", "season"] + [c for c in selected_metrics if c in sub.columns]
+        show_cols = [c for c in show_cols if c in sub.columns]
+        st.dataframe(sub[show_cols], use_container_width=True, height=300)
+        st.download_button(
+            label="Download filtered CSV",
+            data=sub[show_cols].to_csv(index=False).encode("utf-8"),
+            file_name="tournament_mart_performance_over_time.csv",
+            mime="text/csv",
+            key="perf_over_time_csv",
+        )
+
+
 def main() -> None:
     st.set_page_config(page_title="FIVB Leaderboard – Postgres", layout="wide")
     st.title("FIVB Leaderboard")
@@ -389,7 +559,9 @@ def main() -> None:
     if engine is None:
         return
 
-    tab_browser, tab_team, tab_player = st.tabs(["Table browser", "Team Performance", "Player Performance"])
+    tab_browser, tab_team, tab_player, tab_over_time = st.tabs(
+        ["Table browser", "Team Performance", "Player Performance", "Performance over time"]
+    )
 
     with tab_browser:
         _render_table_browser(engine)
@@ -399,6 +571,9 @@ def main() -> None:
 
     with tab_player:
         _render_player_performance_tab(engine)
+
+    with tab_over_time:
+        _render_performance_over_time_tab(engine)
 
 
 if __name__ == "__main__":

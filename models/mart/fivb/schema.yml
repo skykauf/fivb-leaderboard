@@ -6,6 +6,8 @@ models:
     columns:
       - name: tournament_id
         description: "Unique tournament identifier (VIS No)."
+        tests:
+          - dbt_utils.at_least_one
       - name: team_id
         description: "Champion team identifier for this tournament."
       - name: tournament_name

@@ -186,7 +186,7 @@ These implement the ontology for:
 pytest tests/test_vis_client.py -v
 ```
 
-**dbt tests** (run after `dbt run`): the project uses `dbt_utils.at_least_one` on key columns of each core model so that `dbt test` fails if a core table is empty. Install the package and run:
+**dbt tests** (run after `dbt run`): the project uses `dbt_utils.at_least_one` on key columns of each core and mart model so that `dbt test` fails if a downstream table is empty. Install the package and run:
 
 ```bash
 dbt deps

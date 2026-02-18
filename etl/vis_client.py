@@ -176,26 +176,26 @@ def _parse_vis_response(text: str, content_type: str, node_path: str):
 DEFAULT_FIELDS = {
     # BeachTournament: doc includes Code, NoEvent, StartDateMainDraw, EndDateMainDraw, StartDateQualification, EndDateQualification, NbTeamsMainDraw, NbTeamsQualification, Title, Version, ...
     "GetBeachTournamentList": (
-        "No Name Code CountryCode CountryName City StartDate EndDate Season Gender Type Status "
+        "No Name Code CountryCode CountryName City StartDate EndDate Season Gender Type Status Timezone "
         "NoEvent Title Version StartDateMainDraw EndDateMainDraw StartDateQualification EndDateQualification "
         "NbTeamsMainDraw NbTeamsQualification NbTeamsFromQualification"
     ),
     "GetBeachTournament": (
-        "No Name Code CountryCode City StartDate EndDate Season Gender Type Status "
+        "No Name Code CountryCode City StartDate EndDate Season Gender Type Status Timezone "
         "NoEvent Title Version StartDateMainDraw EndDateMainDraw StartDateQualification EndDateQualification "
         "NbTeamsMainDraw NbTeamsQualification"
     ),
     # BeachMatch: doc includes LocalDate, LocalTime, NoPlayerA1, NoPlayerA2, NoPlayerB1, NoPlayerB2, TeamAName, TeamBName, set points, durations, ...
     "GetBeachMatchList": (
         "No NoTournament NoRound NoTeamA NoTeamB NoInTournament MatchPointsA MatchPointsB "
-        "DateTimeLocal LocalDate LocalTime ResultType Status "
+        "DateTimeLocal LocalDate LocalTime ResultType Status Phase "
         "NoPlayerA1 NoPlayerA2 NoPlayerB1 NoPlayerB2 TeamAName TeamBName "
         "PointsTeamASet1 PointsTeamASet2 PointsTeamASet3 PointsTeamBSet1 PointsTeamBSet2 PointsTeamBSet3 "
         "DurationSet1 DurationSet2 DurationSet3 Court RoundCode RoundName TournamentCode TournamentName WinnerRank LoserRank BeginDateTimeUtc"
     ),
     "GetBeachMatch": (
         "No NoTournament NoRound NoTeamA NoTeamB NoInTournament MatchPointsA MatchPointsB "
-        "DateTimeLocal LocalDate LocalTime ResultType Status "
+        "DateTimeLocal LocalDate LocalTime ResultType Status Phase "
         "NoPlayerA1 NoPlayerA2 NoPlayerB1 NoPlayerB2 TeamAName TeamBName "
         "PointsTeamASet1 PointsTeamASet2 PointsTeamASet3 PointsTeamBSet1 PointsTeamBSet2 PointsTeamBSet3 "
         "DurationSet1 DurationSet2 DurationSet3 Court RoundCode RoundName TournamentCode TournamentName WinnerRank LoserRank BeginDateTimeUtc"
@@ -204,14 +204,16 @@ DEFAULT_FIELDS = {
     "GetBeachTeamList": (
         "No NoTournament NoPlayer1 NoPlayer2 Name CountryCode ConfederationCode Status Rank "
         "EarnedPointsTeam EarnedPointsPlayer PositionInMainDraw PositionInQualification "
-        "IsInMainDraw IsInQualification TournamentName TournamentTitle TournamentType"
+        "IsInMainDraw IsInQualification TournamentName TournamentTitle TournamentType "
+        "ValidFrom ValidTo"
     ),
     "GetBeachTeam": (
         "No NoTournament NoPlayer1 NoPlayer2 Name CountryCode ConfederationCode Status Rank "
         "EarnedPointsTeam EarnedPointsPlayer PositionInMainDraw PositionInQualification "
-        "IsInMainDraw IsInQualification TournamentName TournamentTitle"
+        "IsInMainDraw IsInQualification TournamentName TournamentTitle "
+        "ValidFrom ValidTo"
     ),
-    "GetBeachTournamentRanking": "Rank Position NoTeam",
+    "GetBeachTournamentRanking": "Rank Position NoTeam Points PrizeMoney",
     # BeachRound: doc includes No, NoTournament, NoInTournament, Version, RankMethod
     "GetBeachRoundList": "No NoTournament NoInTournament Code Name Bracket Phase StartDate EndDate Version RankMethod",
     "GetBeachRound": "No NoTournament NoInTournament Code Name Bracket Phase StartDate EndDate Version RankMethod",

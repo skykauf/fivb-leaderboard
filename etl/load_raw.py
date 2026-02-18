@@ -108,6 +108,16 @@ def _int_or_none(value: Any) -> int | None:
         return None
 
 
+def _decimal_or_none(value: Any):
+    """Return float for numeric PrizeMoney/points; None for empty or non-numeric."""
+    if value is None or value == "" or (isinstance(value, str) and value.strip() == ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _date_or_none(value: Any) -> date | None:
     if value is None or value == "":
         return None
@@ -182,7 +192,7 @@ def _normalize_tournament(raw: Dict[str, Any]) -> Dict[str, Any]:
         "country_name": raw.get("CountryName") or None,
         "gender": str(raw["Gender"]) if raw.get("Gender") is not None else None,
         "status": str(raw["Status"]) if raw.get("Status") is not None else None,
-        "timezone": None,
+        "timezone": raw.get("Timezone") or None,
         "payload": raw,
     }
 
@@ -196,8 +206,8 @@ def _normalize_team(raw: Dict[str, Any]) -> Dict[str, Any]:
         "player_b_id": _int_or_none(raw.get("NoPlayer2")),
         "country_code": raw.get("CountryCode") or None,
         "status": str(raw["Status"]) if raw.get("Status") is not None else None,
-        "valid_from": None,
-        "valid_to": None,
+        "valid_from": _date_or_none(raw.get("ValidFrom")),
+        "valid_to": _date_or_none(raw.get("ValidTo")),
         "payload": raw,
     }
 
@@ -217,16 +227,26 @@ def _normalize_match(no_tournament: int, raw: Dict[str, Any]) -> Dict[str, Any]:
             pass
     score_sets = f"{points_a}-{points_b}" if points_a is not None and points_b is not None else None
     played_at = raw.get("BeginDateTimeUtc") or raw.get("DateTimeLocal")
+    # DurationSet1/2/3 are in seconds; sum and convert to minutes
+    dur_sec = 0
+    for key in ("DurationSet1", "DurationSet2", "DurationSet3"):
+        v = raw.get(key)
+        if v is not None and str(v).strip() != "":
+            try:
+                dur_sec += int(float(v))
+            except (TypeError, ValueError):
+                pass
+    duration_minutes = dur_sec // 60 if dur_sec else None
     return {
         "match_id": _int_or_none(raw.get("No")),
         "tournament_id": _int_or_none(raw.get("NoTournament")) or no_tournament,
-        "phase": None,
+        "phase": raw.get("Phase") or None,
         "round": raw.get("NoRound") or raw.get("RoundCode"),
         "team1_id": _int_or_none(team_a),
         "team2_id": _int_or_none(team_b),
         "winner_team_id": _int_or_none(winner),
         "score_sets": score_sets,
-        "duration_minutes": None,
+        "duration_minutes": duration_minutes,
         "played_at": played_at,
         "result_type": str(raw["ResultType"]) if raw.get("ResultType") is not None else None,
         "status": str(raw["Status"]) if raw.get("Status") is not None else None,
@@ -241,8 +261,8 @@ def _normalize_result(no_tournament: int, raw: Dict[str, Any]) -> Dict[str, Any]
         "tournament_id": no_tournament,
         "team_id": _int_or_none(raw.get("NoTeam")),
         "finishing_pos": int(pos) if pos is not None and str(pos).strip() != "" else None,
-        "points": None,
-        "prize_money": None,
+        "points": _int_or_none(raw.get("Points")),
+        "prize_money": _decimal_or_none(raw.get("PrizeMoney")),
         "payload": raw,
     }
 
@@ -311,6 +331,8 @@ def _normalize_round_ranking(no_round: int, raw: Dict[str, Any]) -> Dict[str, An
 def _normalize_team_ranking(
     ranking_type: str, snapshot_date: date, gender: str, raw: Dict[str, Any]
 ) -> Dict[str, Any]:
+    # World Tour: EarnedPointsTeam; Olympic: Points
+    earned = raw.get("EarnedPointsTeam") or raw.get("Points")
     return {
         "ranking_type": ranking_type,
         "snapshot_date": snapshot_date,
@@ -319,6 +341,7 @@ def _normalize_team_ranking(
         "no_player1": _int_or_none(raw.get("NoPlayer1")),
         "no_player2": _int_or_none(raw.get("NoPlayer2")),
         "team_name": raw.get("TeamName") or None,
+        "earned_points": _int_or_none(earned),
         "payload": raw,
     }
 

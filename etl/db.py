@@ -198,6 +198,7 @@ def ensure_raw_tables(engine: Engine) -> None:
             no_player1       bigint,
             no_player2       bigint,
             team_name        text,
+            earned_points    integer,
             payload          jsonb,
             ingested_at      timestamptz default now(),
             primary key (ranking_type, snapshot_date, gender, position)

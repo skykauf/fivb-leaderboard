@@ -108,6 +108,8 @@ models:
       - name: no_player1
       - name: no_player2
       - name: team_name
+      - name: earned_points
+        description: "Cumulative points (EarnedPointsTeam for World Tour, Points for Olympic)."
       - name: ingested_at
     tests:
       - dbt_utils.unique_combination_of_columns:

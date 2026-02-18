@@ -9,6 +9,7 @@ select
     tr.snapshot_date,
     tr.gender,
     tr.position,
+    tr.earned_points,
     tr.no_player1,
     tr.no_player2,
     tr.team_name,

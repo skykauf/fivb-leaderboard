@@ -213,7 +213,8 @@ DEFAULT_FIELDS = {
         "IsInMainDraw IsInQualification TournamentName TournamentTitle "
         "ValidFrom ValidTo"
     ),
-    "GetBeachTournamentRanking": "Rank Position NoTeam Points PrizeMoney",
+    # Beach tournament ranking: VIS returns EarnedPointsTeam (points) and EarningsTotalTeam (prize/earnings), not Points/PrizeMoney
+    "GetBeachTournamentRanking": "Rank Position NoTeam TeamName TeamFederationCode EarnedPointsTeam EarningsTotalTeam",
     # BeachRound: doc includes No, NoTournament, NoInTournament, Version, RankMethod
     "GetBeachRoundList": "No NoTournament NoInTournament Code Name Bracket Phase StartDate EndDate Version RankMethod",
     "GetBeachRound": "No NoTournament NoInTournament Code Name Bracket Phase StartDate EndDate Version RankMethod",

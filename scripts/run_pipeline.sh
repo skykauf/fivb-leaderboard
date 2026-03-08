@@ -22,6 +22,9 @@ set -a
 source ".env"
 set +a
 
+# Pipeline always does incremental load (upsert); never truncate raw tables.
+unset TRUNCATE_RAW
+
 export DBT_PROFILES_DIR="${DBT_PROFILES_DIR:-$ROOT/.dbt}"
 
 if command -v pg_isready >/dev/null 2>&1; then

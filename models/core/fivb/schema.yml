@@ -40,7 +40,7 @@ models:
       - name: is_final
         description: "True for final / gold medal match."
       - name: is_pool_phase
-        description: "True for pool play rounds."
+        description: "True for pool play rounds. Derived from round.phase (match.phase is nearly always null in raw)."
       - name: team1_ranking_position
         description: "Team1 world ranking position as of match date (null if not ranked)."
       - name: team2_ranking_position
@@ -57,9 +57,9 @@ models:
       - name: team_id
       - name: finishing_pos
       - name: points
-        description: "Points earned at this tournament (from GetBeachTournamentRanking). Often null because the FIVB API does not populate Points for many tournaments."
+        description: "Points earned at this tournament (from GetBeachTournamentRanking EarnedPointsTeam). Null when API does not populate."
       - name: prize_money
-        description: "Prize money for this finish (from GetBeachTournamentRanking). Often null; API rarely returns PrizeMoney."
+        description: "Prize/earnings for this finish (from GetBeachTournamentRanking EarningsTotalTeam). Null when API does not populate."
       - name: entry_ranking_position
         description: "Team's World Tour ranking position as of tournament start (for seeding context). Null when no ranking snapshot exists on or before tournament start (ETL only loads rankings for snapshot_date = today)."
       - name: entry_ranking_points

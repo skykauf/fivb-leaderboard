@@ -23,6 +23,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date, datetime
+from functools import partial
 from typing import Any, Dict, List, Optional, Tuple
 
 
@@ -70,7 +71,7 @@ class IngestionLimits:
     tournaments: int | None = None
     matches_per_tournament: int | None = None
     results_per_tournament: int | None = None
-    max_workers: int = 4
+    max_workers: int = 8
 
     @classmethod
     def from_env(cls) -> "IngestionLimits":
@@ -90,7 +91,7 @@ class IngestionLimits:
         if not _parallel():
             workers = 1
         elif workers is None or workers < 1:
-            workers = 4
+            workers = 8
         return cls(
             tournaments=_int("LIMIT_TOURNAMENTS"),
             matches_per_tournament=_int("LIMIT_MATCHES_PER_TOURNAMENT"),
@@ -179,15 +180,28 @@ def _normalize_event(raw: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ---- Tournaments ----
+# GetBeachTournamentList does not return City; Name often is the venue/city (e.g. "Acapulco", "Berlin")
 def _normalize_tournament(raw: Dict[str, Any]) -> Dict[str, Any]:
+    name = raw.get("Name") or None
+    city = raw.get("City") or None
+    # When API omits City, use Name as city when it looks like a single place name (one word, no "Tournament"/"Cup"/"Open" etc.)
+    if not city and name and isinstance(name, str):
+        name_clean = name.strip()
+        if name_clean and " " not in name_clean and name_clean.lower() not in (
+            "open", "cup", "championship", "masters", "satellite", "challenger", "continental", "olympic", "world",
+            "finals", "grand", "slam", "pro", "beach", "ecva", "cazova", "afecavol", "central",
+        ):
+            city = name_clean
+    # VIS BeachTournament has no top-level EndDate; API returns EndDateMainDraw / EndDateQualification
+    end_date = _date_or_none(raw.get("EndDate")) or _date_or_none(raw.get("EndDateMainDraw")) or _date_or_none(raw.get("EndDateQualification"))
     return {
         "tournament_id": _int_or_none(raw.get("No")),
-        "name": raw.get("Name") or None,
+        "name": name,
         "season": raw.get("Season") or None,
         "tier": raw.get("Type") or None,
         "start_date": _date_or_none(raw.get("StartDate")),
-        "end_date": _date_or_none(raw.get("EndDate")),
-        "city": raw.get("City") or None,
+        "end_date": end_date,
+        "city": city,
         "country_code": raw.get("CountryCode") or None,
         "country_name": raw.get("CountryName") or None,
         "gender": str(raw["Gender"]) if raw.get("Gender") is not None else None,
@@ -255,14 +269,17 @@ def _normalize_match(no_tournament: int, raw: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ---- Tournament results (finishing positions) ----
+# GetBeachTournamentRanking returns EarnedPointsTeam and EarningsTotalTeam (not Points/PrizeMoney)
 def _normalize_result(no_tournament: int, raw: Dict[str, Any]) -> Dict[str, Any]:
     pos = raw.get("Rank") or raw.get("Position")
+    points = raw.get("EarnedPointsTeam") or raw.get("Points")
+    prize_money = raw.get("EarningsTotalTeam") or raw.get("PrizeMoney")
     return {
         "tournament_id": no_tournament,
         "team_id": _int_or_none(raw.get("NoTeam")),
         "finishing_pos": int(pos) if pos is not None and str(pos).strip() != "" else None,
-        "points": _int_or_none(raw.get("Points")),
-        "prize_money": _decimal_or_none(raw.get("PrizeMoney")),
+        "points": _int_or_none(points),
+        "prize_money": _decimal_or_none(prize_money),
         "payload": raw,
     }
 
@@ -282,6 +299,9 @@ def _normalize_player(raw: Dict[str, Any]) -> Dict[str, Any]:
             height_cm = None
     else:
         height_cm = None
+    # GetPlayerList returns FederationCode (player's country/federation); CountryCode is not returned by the list endpoint.
+    federation_code = raw.get("FederationCode")
+    country_code = (str(federation_code).strip() or None) if federation_code else None
     return {
         "player_id": _int_or_none(raw.get("No")),
         "first_name": first or None,
@@ -290,7 +310,7 @@ def _normalize_player(raw: Dict[str, Any]) -> Dict[str, Any]:
         "gender": str(raw["Gender"]) if raw.get("Gender") is not None else None,
         "birth_date": _date_or_none(birth),
         "height_cm": height_cm,
-        "country_code": raw.get("CountryCode") or None,
+        "country_code": country_code,
         "profile_url": None,
         "payload": raw,
     }
@@ -478,30 +498,40 @@ def load_all_matches_bulk(engine: Engine) -> int:
     return len(rows)
 
 
+def _fetch_and_upsert_results_phase(
+    engine: Engine,
+    no_tournament: int,
+    phase: Optional[str],
+    limit: int | None,
+) -> None:
+    """Single phase of GetBeachTournamentRanking: fetch + normalize + upsert. Used for parallel per-tournament loads."""
+    try:
+        data = fetch_beach_tournament_ranking(no_tournament, phase=phase)
+    except Exception:
+        return
+    valid = [
+        r for r in data
+        if isinstance(r, dict) and "Errors" not in r and (r.get("Rank") is not None or r.get("Position") is not None)
+    ]
+    if limit is not None:
+        valid = valid[: max(1, limit)]
+    rows = [_normalize_result(no_tournament, r) for r in valid]
+    rows = [r for r in rows if r.get("team_id") is not None]
+    if rows:
+        bulk_upsert(
+            engine,
+            "raw.raw_fivb_results",
+            rows,
+            RAW_CONFLICT_COLUMNS["raw.raw_fivb_results"],
+        )
+
+
 def load_results_for_tournament(
     engine: Engine, no_tournament: int, limit: int | None = None
 ) -> None:
     """GetBeachTournamentRanking (Qualification + MainDraw) -> raw_fivb_results."""
     for phase in (None, "MainDraw", "Qualification"):
-        try:
-            data = fetch_beach_tournament_ranking(no_tournament, phase=phase)
-        except Exception:
-            continue
-        valid = [
-            r for r in data
-            if isinstance(r, dict) and "Errors" not in r and (r.get("Rank") is not None or r.get("Position") is not None)
-        ]
-        if limit is not None:
-            valid = valid[: max(1, limit)]
-        rows = [_normalize_result(no_tournament, r) for r in valid]
-        rows = [r for r in rows if r.get("team_id") is not None]
-        if rows:
-            bulk_upsert(
-                engine,
-                "raw.raw_fivb_results",
-                rows,
-                RAW_CONFLICT_COLUMNS["raw.raw_fivb_results"],
-            )
+        _fetch_and_upsert_results_phase(engine, no_tournament, phase, limit)
 
 
 def load_rounds_for_tournament(engine: Engine, no_tournament: int) -> List[Dict[str, Any]]:
@@ -540,7 +570,37 @@ def load_round_ranking_for_round(engine: Engine, no_round: int) -> None:
         )
 
 
-def load_team_rankings(engine: Engine, snapshot_date: date) -> None:
+def _load_one_team_ranking(
+    engine: Engine,
+    snapshot_date: date,
+    ranking_type: str,
+    gender: str,
+    fetcher: Any,
+) -> None:
+    """Fetch one ranking (e.g. beach_world_tour/M) and upsert into raw_fivb_team_rankings."""
+    try:
+        data = fetcher(gender=gender)
+    except Exception as e:
+        logger.warning("%s %s failed: %s", ranking_type, gender, e)
+        return
+    rows = [
+        _normalize_team_ranking(ranking_type, snapshot_date, gender, r)
+        for r in data
+        if isinstance(r, dict) and r.get("Position") is not None
+    ]
+    rows = [r for r in rows if r.get("position") is not None]
+    if rows:
+        bulk_upsert(
+            engine,
+            "raw.raw_fivb_team_rankings",
+            rows,
+            RAW_CONFLICT_COLUMNS["raw.raw_fivb_team_rankings"],
+        )
+
+
+def load_team_rankings(
+    engine: Engine, snapshot_date: date, parallel: bool = True
+) -> None:
     """GetBeachWorldTourRanking and GetBeachOlympicSelectionRanking (M/W) -> raw_fivb_team_rankings."""
     tasks = []
     for gender in ("M", "W"):
@@ -549,25 +609,19 @@ def load_team_rankings(engine: Engine, snapshot_date: date) -> None:
             ("beach_olympic", fetch_beach_olympic_selection_ranking),
         ]:
             tasks.append((ranking_type, gender, fetcher))
-    for ranking_type, gender, fetcher in tqdm(tasks, desc="Rankings (World Tour + Olympic M/W)", unit="fetch"):
-        try:
-            data = fetcher(gender=gender)
-        except Exception as e:
-            logger.warning("%s %s failed: %s", ranking_type, gender, e)
-            continue
-        rows = [
-            _normalize_team_ranking(ranking_type, snapshot_date, gender, r)
-            for r in data
-            if isinstance(r, dict) and r.get("Position") is not None
-        ]
-        rows = [r for r in rows if r.get("position") is not None]
-        if rows:
-            bulk_upsert(
-                engine,
-                "raw.raw_fivb_team_rankings",
-                rows,
-                RAW_CONFLICT_COLUMNS["raw.raw_fivb_team_rankings"],
+    if parallel and len(tasks) > 1:
+        with ThreadPoolExecutor(max_workers=len(tasks)) as executor:
+            list(
+                executor.map(
+                    lambda t: _load_one_team_ranking(engine, snapshot_date, t[0], t[1], t[2]),
+                    tasks,
+                )
             )
+    else:
+        for ranking_type, gender, fetcher in tqdm(
+            tasks, desc="Rankings (World Tour + Olympic M/W)", unit="fetch"
+        ):
+            _load_one_team_ranking(engine, snapshot_date, ranking_type, gender, fetcher)
     print("  Loaded World Tour + Olympic rankings (M/W) -> raw.raw_fivb_team_rankings")
 
 
@@ -577,15 +631,28 @@ def _load_one_tournament(
     limits: IngestionLimits,
 ) -> Tuple[int, Optional[Exception], Dict[str, float]]:
     """Load results and rounds for one tournament (matches loaded in bulk in step 5a).
+    Runs the 4 API calls (3 ranking phases + rounds) in parallel within this task.
     Returns (tournament_id, error_or_none, timings_sec) with keys: results, rounds."""
     timings: Dict[str, float] = {"results": 0.0, "rounds": 0.0}
     try:
         t0 = time.perf_counter()
-        load_results_for_tournament(engine, no_int, limit=limits.results_per_tournament)
-        timings["results"] = time.perf_counter() - t0
-        t0 = time.perf_counter()
-        load_rounds_for_tournament(engine, no_int)
-        timings["rounds"] = time.perf_counter() - t0
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [
+                executor.submit(
+                    _fetch_and_upsert_results_phase,
+                    engine,
+                    no_int,
+                    phase,
+                    limits.results_per_tournament,
+                )
+                for phase in (None, "MainDraw", "Qualification")
+            ]
+            futures.append(executor.submit(load_rounds_for_tournament, engine, no_int))
+            for fut in futures:
+                fut.result()
+        elapsed = time.perf_counter() - t0
+        timings["results"] = elapsed * 0.5  # approximate split for reporting
+        timings["rounds"] = elapsed * 0.5
         return (no_int, None, timings)
     except Exception as e:
         return (no_int, e, timings)
@@ -620,20 +687,20 @@ def run_full_ingestion(limits: IngestionLimits | None = None) -> None:
 
     timings: List[Tuple[str, float]] = []
 
-    # 1. Events
-    print("\n1. GetEventList")
+    # 1–4. Events, Tournaments, Teams, Players (parallel – independent API calls)
+    print("\n1–4. GetEventList + GetBeachTournamentList + GetBeachTeamList + GetPlayerList (parallel)")
     t0 = time.perf_counter()
-    load_events(engine)
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        fut_events = executor.submit(load_events, engine)
+        fut_tournaments = executor.submit(load_tournaments, engine)
+        fut_teams = executor.submit(load_teams, engine)
+        fut_players = executor.submit(load_players, engine)
+        fut_events.result()
+        tournaments = fut_tournaments.result()
+        fut_teams.result()
+        fut_players.result()
     elapsed = time.perf_counter() - t0
-    timings.append(("GetEventList", elapsed))
-    print(f"  → {_format_elapsed(elapsed)}")
-
-    # 2. Tournaments
-    print("\n2. GetBeachTournamentList")
-    t0 = time.perf_counter()
-    tournaments = load_tournaments(engine)
-    elapsed = time.perf_counter() - t0
-    timings.append(("GetBeachTournamentList", elapsed))
+    timings.append(("Events + Tournaments + Teams + Players (parallel)", elapsed))
     print(f"  → {_format_elapsed(elapsed)}")
     to_process = tournaments
     if limits.tournaments is not None and limits.tournaments > 0:
@@ -651,81 +718,63 @@ def run_full_ingestion(limits: IngestionLimits | None = None) -> None:
         tournament_ids.append(no)
     print(f"  Will process {len(tournament_ids)} tournaments for matches/results/rounds (from {MIN_EXPAND_YEAR} onwards)")
 
-    # 3. Teams
-    print("\n3. GetBeachTeamList")
-    t0 = time.perf_counter()
-    load_teams(engine)
-    elapsed = time.perf_counter() - t0
-    timings.append(("GetBeachTeamList", elapsed))
-    print(f"  → {_format_elapsed(elapsed)}")
+    # 5–6. One queue: bulk matches + per-tournament (results/rounds) + 4 rankings — all tasks share a worker pool
+    ranking_tasks: List[Tuple[str, str, Any]] = []
+    for gender in ("M", "W"):
+        for ranking_type, fetcher in [
+            ("beach_world_tour", fetch_beach_world_tour_ranking),
+            ("beach_olympic", fetch_beach_olympic_selection_ranking),
+        ]:
+            ranking_tasks.append((ranking_type, gender, fetcher))
 
-    # 4. Players
-    print("\n4. GetPlayerList")
-    t0 = time.perf_counter()
-    load_players(engine)
-    elapsed = time.perf_counter() - t0
-    timings.append(("GetPlayerList", elapsed))
-    print(f"  → {_format_elapsed(elapsed)}")
-
-    # 5a. All matches in one bulk call (GetBeachMatchList with no filter)
-    print("\n5a. GetBeachMatchList (all matches, 1 call)")
-    t0 = time.perf_counter()
-    load_all_matches_bulk(engine)
-    elapsed = time.perf_counter() - t0
-    timings.append(("GetBeachMatchList (bulk)", elapsed))
-    print(f"  → {_format_elapsed(elapsed)}")
-
-    # 5b. Per tournament: results, rounds, round rankings (matches already loaded in 5a)
     workers = max(1, limits.max_workers)
-    mode = "parallel" if workers > 1 else "sequential"
-    print(f"\n5b. Results + rounds per tournament ({mode}, workers={workers})")
+    num_tasks = 1 + len(tournament_ids) + len(ranking_tasks)
+    print(f"\n5–6. Matches + per-tournament + rankings (queue, {num_tasks} tasks, workers={workers})")
     t0 = time.perf_counter()
     failures: List[Tuple[int, Exception]] = []
     step_totals: Dict[str, float] = {"results": 0.0, "rounds": 0.0}
-    if workers == 1:
-        for no_int in tqdm(tournament_ids, desc="Tournaments", unit="item"):
-            _, err, step_sec = _load_one_tournament(engine, no_int, limits)
-            if err is not None:
-                failures.append((no_int, err))
-            else:
-                for k in step_totals:
-                    step_totals[k] += step_sec.get(k, 0.0)
-    else:
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = {executor.submit(_load_one_tournament, engine, no_int, limits): no_int for no_int in tournament_ids}
-            for fut in tqdm(as_completed(futures), total=len(futures), desc="Tournaments", unit="item"):
-                no_int = futures[fut]
-                try:
-                    _, err, step_sec = fut.result()
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = []
+        futures.append(executor.submit(load_all_matches_bulk, engine))
+        for rt, g, fet in ranking_tasks:
+            futures.append(
+                executor.submit(
+                    partial(_load_one_team_ranking, engine, date.today(), rt, g, fet)
+                )
+            )
+        for no_int in tournament_ids:
+            futures.append(executor.submit(_load_one_tournament, engine, no_int, limits))
+        for fut in tqdm(
+            as_completed(futures),
+            total=len(futures),
+            desc="Matches + tournaments + rankings",
+            unit="task",
+        ):
+            try:
+                result = fut.result()
+                if isinstance(result, tuple) and len(result) == 3:
+                    _no_int, err, step_sec = result
                     if err is not None:
-                        failures.append((no_int, err))
+                        failures.append((_no_int, err))
                     else:
                         for k in step_totals:
                             step_totals[k] += step_sec.get(k, 0.0)
-                except Exception as e:
-                    failures.append((no_int, e))
+            except Exception as e:
+                logger.exception("Task failed: %s", e)
     elapsed = time.perf_counter() - t0
-    timings.append(("Per-tournament (results/rounds)", elapsed))
+    timings.append(("Matches + per-tournament + rankings (queue)", elapsed))
     print(f"  → {_format_elapsed(elapsed)}")
-    # Per-step breakdown (wall-clock sum across tournaments; with parallel workers these overlap)
     n_ok = len(tournament_ids) - len(failures)
     if n_ok > 0:
-        print(f"  5b breakdown (sum across {n_ok} tournaments): GetBeachTournamentRanking {_format_elapsed(step_totals['results'])}, GetBeachRoundList {_format_elapsed(step_totals['rounds'])}")
-
+        print(
+            f"  Breakdown (sum across {n_ok} tournaments): GetBeachTournamentRanking {_format_elapsed(step_totals['results'])}, GetBeachRoundList {_format_elapsed(step_totals['rounds'])}"
+        )
     if failures:
         for no_int, err in failures:
             logger.error("Tournament %s failed: %s", no_int, err)
         print(f"  WARNING: {len(failures)} of {len(tournament_ids)} tournaments had failures")
     else:
-        print(f"  Completed {len(tournament_ids)} tournaments")
-
-    # 6. World Tour + Olympic rankings
-    print("\n6. GetBeachWorldTourRanking + GetBeachOlympicSelectionRanking (M/W)")
-    t0 = time.perf_counter()
-    load_team_rankings(engine, date.today())
-    elapsed = time.perf_counter() - t0
-    timings.append(("World Tour + Olympic rankings (M/W)", elapsed))
-    print(f"  → {_format_elapsed(elapsed)}")
+        print(f"  Completed {len(tournament_ids)} tournaments + bulk matches + 4 rankings")
 
     _verify_core_tables(engine)
 

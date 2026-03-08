@@ -81,7 +81,7 @@ def get_table_stats(engine, table_name: str, columns: list[tuple[str, str]]) -> 
         non_null = row._mapping.get(n_key)
         distinct = row._mapping.get(d_key)
         null_count = (row_count - non_null) if (row_count is not None and non_null is not None) else None
-        null_pct = (100.0 * null_count / row_count) if (row_count and row_count > 0 and null_count is not None) else None
+        null_proportion = (null_count / row_count) if (row_count and row_count > 0 and null_count is not None) else None
         min_val = row._mapping.get(f"_min_{col_name}") if f"_min_{col_name}" in row._mapping else None
         max_val = row._mapping.get(f"_max_{col_name}") if f"_max_{col_name}" in row._mapping else None
         # Coerce for JSON (e.g. Decimal, date)
@@ -95,7 +95,7 @@ def get_table_stats(engine, table_name: str, columns: list[tuple[str, str]]) -> 
             "data_type": data_type,
             "row_count": row_count,
             "null_count": null_count,
-            "null_pct": round(null_pct, 2) if null_pct is not None else None,
+            "null_proportion": round(null_proportion, 4) if null_proportion is not None else None,
             "distinct_count": distinct,
             "min": min_val,
             "max": max_val,
@@ -124,7 +124,7 @@ def get_raw_column_stats(engine) -> list[dict]:
                 "error": str(e),
                 "row_count": None,
                 "null_count": None,
-                "null_pct": None,
+                "null_proportion": None,
                 "distinct_count": None,
                 "min": None,
                 "max": None,
@@ -132,10 +132,10 @@ def get_raw_column_stats(engine) -> list[dict]:
     return all_stats
 
 
-def _format_pct(null_pct):
-    if null_pct is None:
+def _format_pct(null_proportion):
+    if null_proportion is None:
         return "—"
-    return f"{null_pct:.1f}%"
+    return f"{100 * null_proportion:.1f}%"
 
 
 def print_table(stats: list[dict]) -> None:
@@ -153,7 +153,7 @@ def print_table(stats: list[dict]) -> None:
         "column": max(len(str(r.get("column", ""))) for r in rows) + 1,
         "data_type": 24,
         "row_count": 10,
-        "null_pct": 8,
+        "null_proportion": 10,
         "distinct": 10,
         "min": 14,
         "max": 14,
@@ -161,8 +161,8 @@ def print_table(stats: list[dict]) -> None:
     col_widths["table"] = max(col_widths["table"], 22)
     col_widths["column"] = max(col_widths["column"], 18)
     tw, cw = col_widths["table"], col_widths["column"]
-    fmt = f"{{table:<{tw}}} {{column:<{cw}}} {{data_type:<24}} {{row_count:>10}} {{null_pct:>8}} {{distinct:>10}} {{min:>14}} {{max:>14}}"
-    header = fmt.format(table="table", column="column", data_type="data_type", row_count="row_count", null_pct="null_%", distinct="distinct", min="min", max="max")
+    fmt = f"{{table:<{tw}}} {{column:<{cw}}} {{data_type:<24}} {{row_count:>10}} {{null_proportion:>10}} {{distinct:>10}} {{min:>14}} {{max:>14}}"
+    header = fmt.format(table="table", column="column", data_type="data_type", row_count="row_count", null_proportion="null_%", distinct="distinct", min="min", max="max")
     print(header)
     print("-" * len(header))
     for r in rows:
@@ -174,7 +174,7 @@ def print_table(stats: list[dict]) -> None:
                 column=(r["column"] or "")[: col_widths["column"] - 1],
                 data_type=(r.get("data_type") or "")[:24],
                 row_count=r.get("row_count") or "—",
-                null_pct=_format_pct(r.get("null_pct")),
+                null_proportion=_format_pct(r.get("null_proportion")),
                 distinct=r.get("distinct_count") if r.get("distinct_count") is not None else "—",
                 min=min_s,
                 max=max_s,
@@ -228,9 +228,9 @@ def update_staging_schema(stats: list[dict], schema_path: Path) -> None:
                     break
             if raw_table and (raw_table, raw_col) in stats_by_key:
                 s = stats_by_key[(raw_table, raw_col)]
-                null_pct = s["null_pct"]
+                null_proportion = s["null_proportion"]
                 distinct = s["distinct_count"]
-                suffix = f" Raw: null {null_pct:.1f}%, {distinct} distinct." if null_pct is not None and distinct is not None else ""
+                suffix = f" Raw: null {100 * null_proportion:.1f}%, {distinct} distinct." if null_proportion is not None and distinct is not None else ""
                 if suffix:
                     if i + 1 < len(lines) and re.match(r"\s+description:\s+", lines[i + 1]):
                         i += 1
@@ -275,7 +275,7 @@ def main() -> None:
         print(json.dumps(out, indent=2))
     elif args.csv:
         import csv
-        writer = csv.DictWriter(sys.stdout, fieldnames=["table", "column", "data_type", "row_count", "null_count", "null_pct", "distinct_count", "min", "max"], extrasaction="ignore")
+        writer = csv.DictWriter(sys.stdout, fieldnames=["table", "column", "data_type", "row_count", "null_count", "null_proportion", "distinct_count", "min", "max"], extrasaction="ignore")
         writer.writeheader()
         for s in stats:
             if s.get("column") is not None:

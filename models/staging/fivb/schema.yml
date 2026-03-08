@@ -33,12 +33,15 @@ models:
       - name: tier
       - name: start_date
       - name: end_date
+        description: "Tournament end. API returns EndDateMainDraw not EndDate; ETL uses EndDateMainDraw (or EndDateQualification) when EndDate is null."
       - name: city
+        description: "Tournament city/venue. GetBeachTournamentList does not return City; ETL infers from Name when it is a single place-like word (e.g. Acapulco, Berlin)."
       - name: country_code
       - name: country_name
       - name: gender
       - name: status
       - name: timezone
+        description: "VIS DefaultLocalTimeOffset is 'not used'; not returned by GetBeachTournamentList. Do not rely on."
       - name: payload
       - name: ingested_at
 
@@ -54,7 +57,9 @@ models:
       - name: country_code
       - name: status
       - name: valid_from
+        description: "VIS ValidFrom (team validity period). Always null in API response; do not rely on."
       - name: valid_to
+        description: "VIS ValidTo (team validity period). Always null in API response; do not rely on."
       - name: payload
       - name: ingested_at
 
@@ -71,7 +76,9 @@ models:
       - name: birth_date
       - name: height_cm
       - name: country_code
+        description: "Player federation/country from VIS FederationCode (e.g. USA, BRA). GetPlayerList does not return CountryCode; we use FederationCode."
       - name: profile_url
+        description: "Not returned by GetPlayerList; always null. Do not rely on."
       - name: payload
       - name: ingested_at
 
@@ -83,6 +90,7 @@ models:
         test: unique
       - name: tournament_id
       - name: phase
+        description: "Match phase from API. Nearly always null; do not rely on. Use round_code or stg_fivb_rounds.phase instead."
       - name: round_code
         description: "Round code or id (e.g. PA, QF) from raw round field"
       - name: team1_id
@@ -91,6 +99,7 @@ models:
       - name: score_sets
       - name: duration_minutes
       - name: played_at
+        description: "Match start time from API. Nearly always null; do not rely on."
       - name: result_type
       - name: status
       - name: payload
@@ -103,7 +112,9 @@ models:
       - name: team_id
       - name: finishing_pos
       - name: points
+        description: "From API EarnedPointsTeam (points earned at this tournament). Request this field; null when API does not populate."
       - name: prize_money
+        description: "From API EarningsTotalTeam (prize/earnings). Request this field; null when API does not populate."
       - name: payload
       - name: ingested_at
     tests:

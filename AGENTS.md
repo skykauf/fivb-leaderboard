@@ -17,3 +17,7 @@ This keeps the codebase simple and avoids maintaining a migration history or dea
 
 - **Prefer dbt** for testing, transformations, and as much logic as possible: use dbt models, tests, and macros. Run and validate with `dbt run`, `dbt test`, etc.
 - **Use Python** for external interfaces (e.g. VIS API client, loading raw data into Postgres) and for essential modeling that doesn’t fit dbt (e.g. Elo or other algorithms that need iterative or stateful computation). Keep Python focused on ingestion and specialized logic; do the rest in dbt.
+
+## Fail loudly
+
+- **Prefer explicit failures over silent bad state.** When preconditions or order are wrong (e.g. missing table, wrong run order), raise errors or exit with a clear message rather than continuing and writing inconsistent or stale data. Avoid “best effort” behavior that hides problems; fail fast so they can be fixed.

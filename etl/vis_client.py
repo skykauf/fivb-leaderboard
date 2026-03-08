@@ -589,12 +589,16 @@ def fetch_player(no: int, fields: Optional[str] = None) -> List[Dict[str, Any]]:
 def fetch_beach_world_tour_ranking(
     gender: str = "W",
     number: Optional[int] = None,
+    reference_date: Optional[str] = None,
     fields: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Get beach World Tour ranking (VIS GetBeachWorldTourRanking). Gender M or W. Uses old-style wrapper."""
+    """Get beach World Tour ranking (VIS GetBeachWorldTourRanking). Gender M or W. Uses old-style wrapper.
+    reference_date: optional date as YYYY-MM-DD; when the ranking was calculated. If omitted, returns latest."""
     kwargs: Dict[str, Any] = {"Gender": gender, "old_style": True}
     if number is not None:
         kwargs["Number"] = number
+    if reference_date is not None:
+        kwargs["ReferenceDate"] = reference_date
     return vis_request(
         "GetBeachWorldTourRanking",
         "//BeachWorldTourRankingEntry",

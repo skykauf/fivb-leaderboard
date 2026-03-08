@@ -59,6 +59,19 @@ def _tables(schema: str) -> list[str]:
 
 
 @st.cache_data(ttl=60)
+def _raw_column_stats():
+    """Raw schema column statistics (null %, distinct count, min/max)."""
+    try:
+        from scripts.raw_column_stats import get_raw_column_stats
+        engine = _engine()
+        if engine is None:
+            return None
+        return get_raw_column_stats(engine)
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=60)
 def _row_count(schema: str, table: str) -> int | None:
     engine = _engine()
     if engine is None:
@@ -167,6 +180,65 @@ def _performance_by_host_country(team_display_name: str) -> pd.DataFrame | None:
         """)
         with engine.connect() as conn:
             return pd.read_sql(q, conn, params={"team": team_display_name})
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=60)
+def _performance_metrics_by_host_country_team(team_display_name: str) -> pd.DataFrame | None:
+    """Wins, losses, avg finish pos, and averaged performance metrics by tournament host country (from mart.tournament_mart)."""
+    engine = _engine()
+    if engine is None:
+        return None
+    try:
+        q = text("""
+            SELECT
+                tournament_country_code AS host_country,
+                tournament_country_name AS host_country_name,
+                SUM(match_wins)::int AS wins,
+                SUM(match_losses)::int AS losses,
+                SUM(match_wins) + SUM(match_losses) AS total_matches,
+                ROUND(AVG(finishing_pos)::numeric, 2) AS avg_finish_pos,
+                ROUND(AVG(quality_win_loss_score)::numeric, 4) AS avg_quality_win_loss_score,
+                ROUND(AVG(quality_win_loss_score_points)::numeric, 4) AS avg_quality_win_loss_score_points,
+                ROUND(AVG(sum_opponent_points_beaten)::numeric, 2) AS avg_sum_opponent_points_beaten
+            FROM mart.tournament_mart
+            WHERE team_display_name = :team
+            GROUP BY tournament_country_code, tournament_country_name
+            ORDER BY wins DESC, total_matches DESC, host_country
+        """)
+        with engine.connect() as conn:
+            return pd.read_sql(q, conn, params={"team": team_display_name})
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=60)
+def _performance_metrics_by_host_country_player(player_id: int) -> pd.DataFrame | None:
+    """Wins, losses, avg finish pos, and averaged performance metrics by host country for a player (from mart.tournament_mart)."""
+    engine = _engine()
+    if engine is None:
+        return None
+    try:
+        q = text("""
+            SELECT
+                tm.tournament_country_code AS host_country,
+                tm.tournament_country_name AS host_country_name,
+                SUM(tm.match_wins)::int AS wins,
+                SUM(tm.match_losses)::int AS losses,
+                SUM(tm.match_wins) + SUM(tm.match_losses) AS total_matches,
+                ROUND(AVG(tm.finishing_pos)::numeric, 2) AS avg_finish_pos,
+                ROUND(AVG(tm.quality_win_loss_score)::numeric, 4) AS avg_quality_win_loss_score,
+                ROUND(AVG(tm.quality_win_loss_score_points)::numeric, 4) AS avg_quality_win_loss_score_points,
+                ROUND(AVG(tm.sum_opponent_points_beaten)::numeric, 2) AS avg_sum_opponent_points_beaten
+            FROM mart.tournament_mart tm
+            JOIN core.dim_team_tournaments dtt ON dtt.team_id = tm.team_id AND dtt.tournament_id = tm.tournament_id
+            WHERE dtt.player_a_id = :player_id OR dtt.player_b_id = :player_id
+            GROUP BY tm.tournament_country_code, tm.tournament_country_name
+            ORDER BY wins DESC, total_matches DESC, host_country
+        """)
+        with engine.connect() as conn:
+            return pd.read_sql(q, conn, params={"player_id": player_id})
     except Exception:
         return None
 
@@ -360,6 +432,30 @@ def _render_performance_charts(df: pd.DataFrame, entity_label: str, download_key
     fig_depth.update_xaxes(tickangle=-45)
     st.plotly_chart(fig_depth, use_container_width=True)
 
+    if "avg_quality_win_loss_score" in df.columns and df["avg_quality_win_loss_score"].notna().any():
+        fig_qwl = px.bar(
+            df.assign(host_label=x_label),
+            x="host_label",
+            y="avg_quality_win_loss_score",
+            title="Average quality win/loss score by host country",
+            labels={"host_label": "Tournament host country", "avg_quality_win_loss_score": "Avg quality win/loss score"},
+        )
+        fig_qwl.update_layout(height=400, margin=dict(t=60), showlegend=False)
+        fig_qwl.update_xaxes(tickangle=-45)
+        st.plotly_chart(fig_qwl, use_container_width=True)
+
+    if "avg_quality_win_loss_score_points" in df.columns and df["avg_quality_win_loss_score_points"].notna().any():
+        fig_qwl_p = px.bar(
+            df.assign(host_label=x_label),
+            x="host_label",
+            y="avg_quality_win_loss_score_points",
+            title="Average quality win/loss score (points-based) by host country",
+            labels={"host_label": "Tournament host country", "avg_quality_win_loss_score_points": "Avg quality score (points)"},
+        )
+        fig_qwl_p.update_layout(height=400, margin=dict(t=60), showlegend=False)
+        fig_qwl_p.update_xaxes(tickangle=-45)
+        st.plotly_chart(fig_qwl_p, use_container_width=True)
+
     with st.expander("Data table"):
         st.dataframe(df, use_container_width=True)
         st.caption("host_country = code, host_country_name = full name of tournament host.")
@@ -374,7 +470,7 @@ def _render_performance_charts(df: pd.DataFrame, entity_label: str, download_key
 
 def _render_team_performance_tab(engine) -> None:
     st.subheader("Performance by tournament host country")
-    st.caption("Wins/losses and average tournament finish position in tournaments hosted in each country.")
+    st.caption("Wins/losses, average finish position, and performance metrics (averaged by country) in tournaments hosted in each country.")
     st.info("**Country** = tournament host country (where the event was held).")
 
     teams = _team_list()
@@ -384,10 +480,12 @@ def _render_team_performance_tab(engine) -> None:
 
     team = st.selectbox("Team", options=teams, index=0, help="Team display name (Player A / Player B)", key="team_sel")
 
-    df = _performance_by_host_country(team)
+    df = _performance_metrics_by_host_country_team(team)
     if df is None:
-        st.error("Could not load performance data. Ensure core.fct_matches and core.fct_tournament_standings exist.")
-        return
+        df = _performance_by_host_country(team)
+        if df is None:
+            st.error("Could not load performance data. Ensure core models and optionally mart.tournament_mart exist.")
+            return
     if df.empty:
         st.warning(f"No matches found for **{team}**.")
         return
@@ -397,7 +495,7 @@ def _render_team_performance_tab(engine) -> None:
 
 def _render_player_performance_tab(engine) -> None:
     st.subheader("Performance by tournament host country")
-    st.caption("Wins/losses and average tournament finish position in tournaments hosted in each country (player level).")
+    st.caption("Wins/losses, average finish position, and performance metrics (averaged by country) in tournaments hosted in each country (player level).")
     st.info("**Country** = tournament host country (where the event was held).")
 
     players = _player_list()
@@ -411,10 +509,12 @@ def _render_player_performance_tab(engine) -> None:
     player_name = st.selectbox("Player", options=player_options, index=0, key="player_sel")
     player_id = player_id_by_name[player_name]
 
-    df = _performance_by_host_country_player(player_id)
+    df = _performance_metrics_by_host_country_player(player_id)
     if df is None:
-        st.error("Could not load performance data. Ensure core models exist.")
-        return
+        df = _performance_by_host_country_player(player_id)
+        if df is None:
+            st.error("Could not load performance data. Ensure core models and optionally mart.tournament_mart exist.")
+            return
     if df.empty:
         st.warning(f"No matches found for **{player_name}**.")
         return
@@ -551,6 +651,36 @@ def _render_performance_over_time_tab(engine) -> None:
         )
 
 
+def _render_raw_stats_tab(engine) -> None:
+    st.subheader("Raw table column statistics")
+    st.caption("Summary stats for every column in schema `raw` (null %, distinct count, min/max for numeric/date). Run pipeline first.")
+
+    stats = _raw_column_stats()
+    if stats is None:
+        st.warning("Could not load raw stats. Ensure DATABASE_URL is set and raw tables exist (run pipeline).")
+        return
+    rows = [s for s in stats if s.get("column")]
+    if not rows:
+        st.info("No raw tables or columns found. Run `python -m etl.load_raw` to populate raw schema.")
+        return
+
+    df = pd.DataFrame(rows)
+    df = df.rename(columns={"distinct_count": "distinct"})
+    tables = ["All"] + sorted(df["table"].unique().tolist())
+    selected = st.selectbox("Filter by table", options=tables, index=0)
+    if selected != "All":
+        df = df[df["table"] == selected]
+    st.dataframe(df, use_container_width=True, height=500)
+    with st.expander("Export"):
+        st.download_button(
+            label="Download as CSV",
+            data=df.to_csv(index=False).encode("utf-8"),
+            file_name="raw_column_stats.csv",
+            mime="text/csv",
+            key="raw_stats_csv",
+        )
+
+
 def main() -> None:
     st.set_page_config(page_title="FIVB Leaderboard – Postgres", layout="wide")
     st.title("FIVB Leaderboard")
@@ -559,12 +689,15 @@ def main() -> None:
     if engine is None:
         return
 
-    tab_browser, tab_team, tab_player, tab_over_time = st.tabs(
-        ["Table browser", "Team Performance", "Player Performance", "Performance over time"]
+    tab_browser, tab_raw_stats, tab_team, tab_player, tab_over_time = st.tabs(
+        ["Table browser", "Raw table stats", "Team Performance", "Player Performance", "Performance over time"]
     )
 
     with tab_browser:
         _render_table_browser(engine)
+
+    with tab_raw_stats:
+        _render_raw_stats_tab(engine)
 
     with tab_team:
         _render_team_performance_tab(engine)

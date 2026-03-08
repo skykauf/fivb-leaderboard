@@ -740,5 +740,4 @@ def run_full_ingestion(limits: IngestionLimits | None = None) -> None:
 
 
 if __name__ == "__main__":
-    # run_full_ingestion(limits=IngestionLimits.from_env())
-    pass
+    run_full_ingestion(limits=IngestionLimits.from_env())

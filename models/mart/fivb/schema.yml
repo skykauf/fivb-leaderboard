@@ -163,3 +163,35 @@ models:
         description: "True if ranking position was in top 10 at tournament time."
       - name: is_top_16_at_tournament
         description: "True if ranking position was in top 16 at tournament time (Olympic-relevant)."
+
+  - name: elo_match_feed
+    description: "One row per completed match: H2H-only input for the Python Elo calculator (no rankings/standings)."
+    columns:
+      - name: match_id
+      - name: played_at
+      - name: tournament_gender
+      - name: team1_player_a_id
+      - name: team1_player_b_id
+      - name: team2_player_a_id
+      - name: team2_player_b_id
+      - name: is_winner_team1
+
+  - name: player_elo_history
+    description: "Player Elo history with names; built on core.player_elo_history (from Python Elo script). One row per player per match played."
+    columns:
+      - name: player_id
+      - name: player_name
+      - name: gender
+      - name: as_of_date
+      - name: match_id
+      - name: elo_rating
+
+  - name: player_elo_latest
+    description: "Latest Elo rating per player per gender (current rating for joins / leaderboards)."
+    columns:
+      - name: player_id
+      - name: player_name
+      - name: gender
+      - name: elo_rating
+      - name: elo_as_of_date
+      - name: last_match_id

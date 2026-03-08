@@ -1,4 +1,5 @@
-# Staging layer: one-to-one from raw with explicit column list and tests
+# Staging layer: one-to-one from raw with explicit column list and tests.
+# Column stats (null %, distinct) can be appended via: python scripts/raw_column_stats.py --update-staging-schema
 version: 2
 models:
   - name: stg_fivb_events
@@ -11,6 +12,14 @@ models:
       - name: name
       - name: start_date
       - name: end_date
+      - name: type
+      - name: no_parent_event
+      - name: country_code
+      - name: has_beach_tournament
+      - name: has_men_tournament
+      - name: has_women_tournament
+      - name: is_vis_managed
+      - name: payload
       - name: ingested_at
 
   - name: stg_fivb_tournaments
@@ -21,10 +30,16 @@ models:
         test: unique
       - name: name
       - name: season
-      - name: gender
+      - name: tier
       - name: start_date
       - name: end_date
+      - name: city
       - name: country_code
+      - name: country_name
+      - name: gender
+      - name: status
+      - name: timezone
+      - name: payload
       - name: ingested_at
 
   - name: stg_fivb_teams
@@ -37,6 +52,10 @@ models:
       - name: player_a_id
       - name: player_b_id
       - name: country_code
+      - name: status
+      - name: valid_from
+      - name: valid_to
+      - name: payload
       - name: ingested_at
 
   - name: stg_fivb_players
@@ -45,10 +64,15 @@ models:
       - name: player_id
         description: "Unique player number (VIS No)"
         test: unique
+      - name: first_name
+      - name: last_name
       - name: full_name
       - name: gender
       - name: birth_date
+      - name: height_cm
       - name: country_code
+      - name: profile_url
+      - name: payload
       - name: ingested_at
 
   - name: stg_fivb_matches
@@ -58,12 +82,18 @@ models:
         description: "Unique match number (VIS No)"
         test: unique
       - name: tournament_id
+      - name: phase
       - name: round_code
         description: "Round code or id (e.g. PA, QF) from raw round field"
       - name: team1_id
       - name: team2_id
       - name: winner_team_id
+      - name: score_sets
+      - name: duration_minutes
       - name: played_at
+      - name: result_type
+      - name: status
+      - name: payload
       - name: ingested_at
 
   - name: stg_fivb_results
@@ -72,6 +102,9 @@ models:
       - name: tournament_id
       - name: team_id
       - name: finishing_pos
+      - name: points
+      - name: prize_money
+      - name: payload
       - name: ingested_at
     tests:
       - dbt_utils.unique_combination_of_columns:
@@ -96,6 +129,7 @@ models:
       - name: start_date
       - name: end_date
       - name: rank_method
+      - name: payload
       - name: ingested_at
 
   - name: stg_fivb_team_rankings
@@ -110,6 +144,7 @@ models:
       - name: team_name
       - name: earned_points
         description: "Cumulative points (EarnedPointsTeam for World Tour, Points for Olympic)."
+      - name: payload
       - name: ingested_at
     tests:
       - dbt_utils.unique_combination_of_columns:

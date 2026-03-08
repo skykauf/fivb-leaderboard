@@ -16,7 +16,7 @@ Docs: <https://www.fivb.org/VisSDK/VisWebService/>
 | **GetBeachRoundList** | List rounds for a tournament | **Filter as child** `<Filter NoTournament="502"/>`; old-style |
 | **GetPlayerList** | List all players | |
 | **GetPlayer** | Single player by No | old-style, XML |
-| **GetBeachWorldTourRanking** | World Tour ranking | Gender M/W; old-style, XML |
+| **GetBeachWorldTourRanking** | World Tour ranking | Gender M/W; optional Number, **ReferenceDate** (YYYY-MM-DD for historical snapshot); old-style, XML. See [GetBeachWorldTourRanking](https://www.fivb.org/VisSDK/VisWebService/GetBeachWorldTourRanking.html). |
 | **GetBeachOlympicSelectionRanking** | Olympic selection ranking | Gender M/W; old-style, XML |
 | **GetBeachRound** | Single round by No | [GetBeachRound](https://www.fivb.org/VisSDK/VisWebService/GetBeachRound.html); old-style |
 | **GetBeachRoundRanking** | Pool/round standings (teams in a round) | [GetBeachRoundRanking](https://www.fivb.org/VisSDK/VisWebService/GetBeachRoundRanking.html); only for rounds with ranking; old-style |

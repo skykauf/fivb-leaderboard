@@ -1,0 +1,11 @@
+# Elo table populated by scripts/elo_compute.py (reads mart.elo_match_feed).
+# First time: python scripts/elo_compute.py --init-only  ->  dbt run  ->  python scripts/elo_compute.py
+# Then: dbt run (to build/refresh elo_match_feed), then python scripts/elo_compute.py to refresh Elo.
+version: 2
+sources:
+  - name: elo
+    description: "Player Elo history computed from H2H match results (Python script)."
+    schema: core
+    tables:
+      - name: player_elo_history
+        description: "One row per player per match played: Elo rating after that match (H2H-only, de novo)."

@@ -72,6 +72,10 @@ class IngestionLimits:
     matches_per_tournament: int | None = None
     results_per_tournament: int | None = None
     max_workers: int = 8
+    # Two-bucket skip: recent (start_date >= today - cutoff_days) skip if ingested within recent_hours; older skip if within older_days. 0 = disabled.
+    recent_cutoff_days: float = 90.0
+    recent_window_hours: float = 24.0
+    older_window_days: float = 30.0
 
     @classmethod
     def from_env(cls) -> "IngestionLimits":
@@ -80,6 +84,15 @@ class IngestionLimits:
         def _int(key: str) -> int | None:
             v = os.environ.get(key)
             return int(v) if v not in (None, "") else None
+
+        def _float(key: str, default: float) -> float:
+            v = os.environ.get(key)
+            if v is None or v == "":
+                return default
+            try:
+                return float(v)
+            except ValueError:
+                return default
 
         def _parallel() -> bool:
             v = os.environ.get("ETL_PARALLEL", "").strip().lower()
@@ -97,6 +110,9 @@ class IngestionLimits:
             matches_per_tournament=_int("LIMIT_MATCHES_PER_TOURNAMENT"),
             results_per_tournament=_int("LIMIT_RESULTS_PER_TOURNAMENT"),
             max_workers=workers,
+            recent_cutoff_days=_float("ETL_RECENT_CUTOFF_DAYS", 90.0),
+            recent_window_hours=_float("ETL_RECENT_WINDOW_HOURS", 24.0),
+            older_window_days=_float("ETL_OLDER_WINDOW_DAYS", 30.0),
         )
 
 
@@ -658,6 +674,39 @@ def _load_one_tournament(
         return (no_int, e, timings)
 
 
+def _tournament_ids_to_skip(engine: Engine, limits: IngestionLimits) -> set[int]:
+    """Tournament IDs to skip: recent (start_date >= today - cutoff) if ingested in last recent_hours; older if in last older_days."""
+    if limits.recent_window_hours <= 0 and limits.older_window_days <= 0:
+        return set()
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("""
+                WITH last_ingested AS (
+                    SELECT tournament_id, max(ingested_at) AS last_ingested FROM (
+                        SELECT tournament_id, ingested_at FROM raw.raw_fivb_results
+                        UNION ALL
+                        SELECT tournament_id, ingested_at FROM raw.raw_fivb_rounds
+                    ) x GROUP BY tournament_id
+                )
+                SELECT i.tournament_id
+                FROM last_ingested i
+                JOIN raw.raw_fivb_tournaments t ON t.tournament_id = i.tournament_id
+                WHERE
+                  (t.start_date >= current_date - :cutoff_days * interval '1 day'
+                   AND i.last_ingested >= now() - :recent_hours * interval '1 hour')
+                  OR
+                  (t.start_date IS NULL OR t.start_date < current_date - :cutoff_days * interval '1 day')
+                  AND i.last_ingested >= now() - :older_days * interval '1 day'
+            """),
+            {
+                "cutoff_days": limits.recent_cutoff_days,
+                "recent_hours": limits.recent_window_hours,
+                "older_days": limits.older_window_days,
+            },
+        ).fetchall()
+    return {r[0] for r in rows}
+
+
 def _verify_core_tables(engine: Engine) -> None:
     core = ["raw.raw_fivb_tournaments", "raw.raw_fivb_teams", "raw.raw_fivb_matches"]
     with engine.connect() as conn:
@@ -716,7 +765,13 @@ def run_full_ingestion(limits: IngestionLimits | None = None) -> None:
         if year is not None and year < MIN_EXPAND_YEAR:
             continue
         tournament_ids.append(no)
-    print(f"  Will process {len(tournament_ids)} tournaments for matches/results/rounds (from {MIN_EXPAND_YEAR} onwards)")
+    # Skip by two-bucket rule: recent (end_date >= today - 90d) if ingested in 24h; older if in 30d
+    skip_ids = _tournament_ids_to_skip(engine, limits)
+    if skip_ids:
+        tournament_ids = [tid for tid in tournament_ids if tid not in skip_ids]
+        print(f"  Skipping {len(skip_ids)} (recent: 24h, older: 30d); will load {len(tournament_ids)}")
+    else:
+        print(f"  Will process {len(tournament_ids)} tournaments for matches/results/rounds (from {MIN_EXPAND_YEAR} onwards)")
 
     # 5–6. One queue: bulk matches + per-tournament (results/rounds) + 4 rankings — all tasks share a worker pool
     ranking_tasks: List[Tuple[str, str, Any]] = []

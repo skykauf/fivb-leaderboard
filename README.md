@@ -85,6 +85,12 @@ streamlit run streamlit_app.py
 
 Uses `DATABASE_URL` from `.env`. Pick a schema and table in the sidebar; you can adjust the max rows to load and download the current result as CSV.
 
+### 3.6 Cursor MCP (Postgres)
+
+The project includes a [Model Context Protocol](https://modelcontextprotocol.io/) server config so Cursor can query Postgres directly (read-only). Config lives in `.cursor/mcp.json` and uses `@modelcontextprotocol/server-postgres`.
+
+**One-time setup:** Edit `.cursor/mcp.json` and set the `postgresql://` URL to match your DB (same user/password/host as in `.env`, but use the standard URL form: `postgresql://user:password@localhost:5432/fivb_leaderboard`). Then restart Cursor so it picks up the MCP server. After that, the AI can run read-only SQL and inspect table schemas against your local database.
+
 ### 4. Raw FIVB data (VIS Web Service)
 
 The ETL pulls data from the **FIVB VIS Web Service** (data API), not the web portal:

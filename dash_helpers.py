@@ -300,7 +300,7 @@ def render_performance_charts(
         height=400,
         margin=dict(t=60),
     )
-    st.plotly_chart(fig_wl, use_container_width=True)
+    st.plotly_chart(fig_wl, width="stretch")
 
     fig_depth = px.bar(
         df.assign(host_label=x_label),
@@ -314,7 +314,7 @@ def render_performance_charts(
     )
     fig_depth.update_layout(height=400, margin=dict(t=60), showlegend=False)
     fig_depth.update_xaxes(tickangle=-45)
-    st.plotly_chart(fig_depth, use_container_width=True)
+    st.plotly_chart(fig_depth, width="stretch")
 
     if "avg_quality_win_loss_score" in df.columns and df["avg_quality_win_loss_score"].notna().any():
         fig_qwl = px.bar(
@@ -326,7 +326,7 @@ def render_performance_charts(
         )
         fig_qwl.update_layout(height=400, margin=dict(t=60), showlegend=False)
         fig_qwl.update_xaxes(tickangle=-45)
-        st.plotly_chart(fig_qwl, use_container_width=True)
+        st.plotly_chart(fig_qwl, width="stretch")
 
     if "avg_quality_win_loss_score_points" in df.columns and df["avg_quality_win_loss_score_points"].notna().any():
         fig_qwl_p = px.bar(
@@ -338,10 +338,10 @@ def render_performance_charts(
         )
         fig_qwl_p.update_layout(height=400, margin=dict(t=60), showlegend=False)
         fig_qwl_p.update_xaxes(tickangle=-45)
-        st.plotly_chart(fig_qwl_p, use_container_width=True)
+        st.plotly_chart(fig_qwl_p, width="stretch")
 
     with st.expander("Data table"):
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
         st.caption("host_country = code, host_country_name = full name of tournament host.")
         st.download_button(
             label="Download as CSV",
@@ -507,12 +507,12 @@ def render_performance_over_time_tab(st: "streamlit.delta_generator.DeltaGenerat
         fig.update_layout(height=400, legend=dict(orientation="h", yanchor="bottom", y=1.02), margin=dict(t=50))
         if x_col == "season_year":
             fig.update_xaxes(dtick=1)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     with st.expander("Data table (filtered)"):
         show_cols = [x_col, "team_display_name", "tournament_name", "season"] + [c for c in selected_metrics if c in sub.columns]
         show_cols = [c for c in show_cols if c in sub.columns]
-        st.dataframe(sub[show_cols], use_container_width=True, height=300)
+        st.dataframe(sub[show_cols], width="stretch", height=300)
         st.download_button(
             label="Download filtered CSV",
             data=sub[show_cols].to_csv(index=False).encode("utf-8"),

@@ -9,6 +9,7 @@ select
     m.match_id,
     m.tournament_id,
     m.played_at,
+    m.match_date,
     m.match_phase,
     m.round_code,
     m.team1_id,

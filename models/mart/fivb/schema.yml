@@ -10,6 +10,9 @@ models:
           - dbt_utils.at_least_one
       - name: tournament_id
       - name: played_at
+        description: "Match timestamp when available; rarely populated in source."
+      - name: match_date
+        description: "Canonical match date for ordering: COALESCE(played_at, round_start_date, tournament_start_date). Use for time ordering and filters."
       - name: tournament_name
       - name: season
       - name: tournament_gender
@@ -165,9 +168,11 @@ models:
         description: "True if ranking position was in top 16 at tournament time (Olympic-relevant)."
 
   - name: elo_match_feed
-    description: "One row per completed match: H2H-only input for the Python Elo calculator (no rankings/standings)."
+    description: "One row per completed match: H2H-only input for the Python Elo calculator (no rankings/standings). Ordered by match_date (played_at is rarely populated)."
     columns:
       - name: match_id
+      - name: match_date
+        description: "Canonical match date for ordering and as_of_date: COALESCE(played_at, round_start_date, tournament_start_date)."
       - name: played_at
       - name: tournament_gender
       - name: team1_player_a_id
@@ -177,21 +182,40 @@ models:
       - name: is_winner_team1
 
   - name: player_elo_history
-    description: "Player Elo history with names; built on core.player_elo_history (from Python Elo script). One row per player per match played."
+    description: "Flat Elo history: one row per player per match with player and tournament context (from core.player_elo_history + players + matches + tournaments)."
     columns:
       - name: player_id
       - name: player_name
+      - name: player_country_code
+        description: "Player country code (from stg_fivb_players)."
       - name: gender
       - name: as_of_date
       - name: match_id
+      - name: tournament_id
+        description: "Tournament where this match was played."
+      - name: tournament_name
+      - name: tournament_season
       - name: elo_rating
 
   - name: player_elo_latest
-    description: "Latest Elo rating per player per gender (current rating for joins / leaderboards)."
+    description: "Latest Elo per player per gender with player metadata, last match played, and summary stats (flat mart for leaderboards)."
     columns:
       - name: player_id
       - name: player_name
+      - name: player_country_code
+        description: "Player country code (from stg_fivb_players)."
       - name: gender
       - name: elo_rating
-      - name: elo_as_of_date
+      - name: matches_played
+        description: "Total matches in Elo history for this player/gender."
+      - name: wins
+        description: "Matches won (player was on winning team)."
+      - name: losses
+        description: "Matches lost (matches_played - wins)."
+      - name: last_match_played_at
+        description: "Date of the last match that updated this rating (tournament start date)."
       - name: last_match_id
+      - name: last_match_tournament_id
+        description: "Tournament where the last match was played."
+      - name: last_match_tournament_name
+      - name: last_match_tournament_season

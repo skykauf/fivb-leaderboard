@@ -51,7 +51,7 @@ final_matches as (
     select
         m.tournament_id,
         m.winner_team_id as team_id,
-        m.played_at as final_played_at,
+        m.match_date as final_played_at,
         m.score_sets as final_score_sets,
         m.duration_minutes as final_duration_minutes,
         m.round_name as final_round_name,

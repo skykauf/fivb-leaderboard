@@ -11,7 +11,7 @@ from .config import get_db_config
 
 def get_engine() -> Engine:
     cfg = get_db_config()
-    return create_engine(cfg.url, future=True)
+    return create_engine(cfg.url, future=True, pool_pre_ping=True)
 
 
 def drop_all_schemas(engine: Engine) -> None:
@@ -175,6 +175,13 @@ def ensure_raw_tables(engine: Engine) -> None:
         );
         """,
         """
+        create table if not exists raw.raw_fivb_tournament_empty_check (
+            tournament_id    bigint primary key,
+            results_empty_at timestamptz,
+            rounds_empty_at  timestamptz
+        );
+        """,
+        """
         create table if not exists raw.raw_fivb_round_rankings (
             round_id         bigint,
             position         integer,
@@ -250,6 +257,20 @@ def ensure_raw_tables(engine: Engine) -> None:
                 raise
 
 
+def ensure_raw_tournament_empty_check_table(engine: Engine) -> None:
+    """Ensure raw.raw_fivb_tournament_empty_check exists (for pipelines where it was added after DB creation)."""
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+                CREATE TABLE IF NOT EXISTS raw.raw_fivb_tournament_empty_check (
+                    tournament_id    bigint primary key,
+                    results_empty_at timestamptz,
+                    rounds_empty_at  timestamptz
+                )
+            """)
+        )
+
+
 def truncate_raw_tables(engine: Engine) -> None:
     """Truncate all raw tables so the next load is a full refresh."""
     tables = [
@@ -259,6 +280,7 @@ def truncate_raw_tables(engine: Engine) -> None:
         "raw.raw_fivb_rankings",
         "raw.raw_fivb_matches",
         "raw.raw_fivb_rounds",
+        "raw.raw_fivb_tournament_empty_check",
         "raw.raw_fivb_teams",
         "raw.raw_fivb_tournaments",
         "raw.raw_fivb_players",

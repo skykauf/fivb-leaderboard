@@ -4,11 +4,12 @@
         tags=['core', 'fivb', 'fact'],
     )
 }}
--- Latest world ranking position per team as of match date (lower position = higher seed)
+-- Latest world ranking position per team as of match date (lower position = higher seed).
+-- Match date: played_at is rarely populated; use COALESCE(played_at, round_start_date, tournament_start_date).
 with match_team_rankings as (
     select
         m.match_id,
-        m.played_at,
+        coalesce(m.played_at, r.start_date, dt.start_date)::date as match_date,
         m.team1_id,
         m.team2_id,
         m.winner_team_id,
@@ -28,11 +29,12 @@ with match_team_rankings as (
         end as which_team
     from {{ ref('stg_fivb_matches') }} as m
     join {{ ref('dim_tournaments') }} as dt on dt.tournament_id = m.tournament_id
+    left join {{ ref('stg_fivb_rounds') }} as r on r.tournament_id = m.tournament_id and r.code = m.round_code
     join {{ ref('dim_team_tournaments') }} as t1 on t1.team_id = m.team1_id and t1.tournament_id = m.tournament_id
     join {{ ref('dim_team_tournaments') }} as t2 on t2.team_id = m.team2_id and t2.tournament_id = m.tournament_id
     join {{ ref('fct_team_rankings') }} as tr
         on tr.gender = dt.gender
-        and tr.snapshot_date <= m.played_at
+        and tr.snapshot_date <= coalesce(m.played_at, r.start_date, dt.start_date)
         and (
             ((tr.no_player1 = t1.player_a_id and tr.no_player2 = t1.player_b_id) or (tr.no_player1 = t1.player_b_id and tr.no_player2 = t1.player_a_id))
             or ((tr.no_player1 = t2.player_a_id and tr.no_player2 = t2.player_b_id) or (tr.no_player1 = t2.player_b_id and tr.no_player2 = t2.player_a_id))
@@ -63,6 +65,8 @@ select
     m.match_id,
     m.tournament_id,
     m.played_at,
+    r.start_date as round_start_date,
+    coalesce(m.played_at, r.start_date, dt.start_date)::date as match_date,
     m.phase as match_phase,
     m.round_code,
     m.team1_id,

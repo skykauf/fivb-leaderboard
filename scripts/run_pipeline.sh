@@ -25,6 +25,19 @@ set +a
 # Pipeline always does incremental load (upsert); never truncate raw tables.
 unset TRUNCATE_RAW
 
+# Optional: skip pulling data from VIS (only run dbt + elo compute on existing raw data).
+SKIP_FETCH=0
+for arg in "$@"; do
+  case "$arg" in
+    --no-fetch) SKIP_FETCH=1 ;;
+    --help|-h)
+      echo "Usage: $0 [--no-fetch]"
+      echo "  --no-fetch  Skip VIS/ETL step; only run dbt and elo compute on existing raw data."
+      exit 0
+      ;;
+  esac
+done
+
 export DBT_PROFILES_DIR="${DBT_PROFILES_DIR:-$ROOT/.dbt}"
 
 if command -v pg_isready >/dev/null 2>&1; then
@@ -36,7 +49,11 @@ if command -v pg_isready >/dev/null 2>&1; then
   }
 fi
 
-python -m etl.load_raw
+if [[ "$SKIP_FETCH" -eq 0 ]]; then
+  python -m etl.load_raw
+else
+  echo "Skipping VIS fetch (--no-fetch). Using existing raw data."
+fi
 
 # Ensure core.player_elo_history exists so dbt elo marts can build even before first compute.
 python scripts/elo_compute.py --init-only

@@ -42,6 +42,7 @@ from tqdm import tqdm
 from .db import (
     bulk_upsert,
     ensure_raw_tables,
+    ensure_raw_tournament_empty_check_table,
     get_engine,
     RAW_CONFLICT_COLUMNS,
     truncate_raw_tables,
@@ -514,17 +515,61 @@ def load_all_matches_bulk(engine: Engine) -> int:
     return len(rows)
 
 
+def _record_results_empty(engine: Engine, tournament_id: int) -> None:
+    """Record that we checked this tournament for results and got none (so we can skip it for a while)."""
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+                INSERT INTO raw.raw_fivb_tournament_empty_check (tournament_id, results_empty_at)
+                VALUES (:tid, now())
+                ON CONFLICT (tournament_id) DO UPDATE SET results_empty_at = now()
+            """),
+            {"tid": tournament_id},
+        )
+
+
+def _record_rounds_empty(engine: Engine, tournament_id: int) -> None:
+    """Record that we checked this tournament for rounds and got none."""
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+                INSERT INTO raw.raw_fivb_tournament_empty_check (tournament_id, rounds_empty_at)
+                VALUES (:tid, now())
+                ON CONFLICT (tournament_id) DO UPDATE SET rounds_empty_at = now()
+            """),
+            {"tid": tournament_id},
+        )
+
+
+def _clear_results_empty(engine: Engine, tournament_id: int) -> None:
+    """Clear the 'results empty' sentinel after we wrote results."""
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE raw.raw_fivb_tournament_empty_check SET results_empty_at = NULL WHERE tournament_id = :tid"),
+            {"tid": tournament_id},
+        )
+
+
+def _clear_rounds_empty(engine: Engine, tournament_id: int) -> None:
+    """Clear the 'rounds empty' sentinel after we wrote rounds."""
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE raw.raw_fivb_tournament_empty_check SET rounds_empty_at = NULL WHERE tournament_id = :tid"),
+            {"tid": tournament_id},
+        )
+
+
 def _fetch_and_upsert_results_phase(
     engine: Engine,
     no_tournament: int,
     phase: Optional[str],
     limit: int | None,
-) -> None:
-    """Single phase of GetBeachTournamentRanking: fetch + normalize + upsert. Used for parallel per-tournament loads."""
+) -> bool:
+    """Single phase of GetBeachTournamentRanking: fetch + normalize + upsert. Returns True if we wrote any rows."""
     try:
         data = fetch_beach_tournament_ranking(no_tournament, phase=phase)
     except Exception:
-        return
+        return False
     valid = [
         r for r in data
         if isinstance(r, dict) and "Errors" not in r and (r.get("Rank") is not None or r.get("Position") is not None)
@@ -540,14 +585,21 @@ def _fetch_and_upsert_results_phase(
             rows,
             RAW_CONFLICT_COLUMNS["raw.raw_fivb_results"],
         )
+        return True
+    return False
 
 
 def load_results_for_tournament(
     engine: Engine, no_tournament: int, limit: int | None = None
 ) -> None:
     """GetBeachTournamentRanking (Qualification + MainDraw) -> raw_fivb_results."""
+    any_wrote = False
     for phase in (None, "MainDraw", "Qualification"):
-        _fetch_and_upsert_results_phase(engine, no_tournament, phase, limit)
+        any_wrote |= _fetch_and_upsert_results_phase(engine, no_tournament, phase, limit)
+    if any_wrote:
+        _clear_results_empty(engine, no_tournament)
+    else:
+        _record_results_empty(engine, no_tournament)
 
 
 def load_rounds_for_tournament(engine: Engine, no_tournament: int) -> List[Dict[str, Any]]:
@@ -562,6 +614,9 @@ def load_rounds_for_tournament(engine: Engine, no_tournament: int) -> List[Dict[
             rows,
             RAW_CONFLICT_COLUMNS["raw.raw_fivb_rounds"],
         )
+        _clear_rounds_empty(engine, no_tournament)
+    else:
+        _record_rounds_empty(engine, no_tournament)
     return data
 
 
@@ -675,36 +730,51 @@ def _load_one_tournament(
 
 
 def _tournament_ids_to_skip(engine: Engine, limits: IngestionLimits) -> set[int]:
-    """Tournament IDs to skip: recent (start_date >= today - cutoff) if ingested in last recent_hours; older if in last older_days."""
-    if limits.recent_window_hours <= 0 and limits.older_window_days <= 0:
-        return set()
+    """Tournament IDs to skip: (1) recent/older already ingested within window; (2) recently confirmed empty (no results and no rounds)."""
+    skip: set[int] = set()
     with engine.connect() as conn:
-        rows = conn.execute(
-            text("""
-                WITH last_ingested AS (
-                    SELECT tournament_id, max(ingested_at) AS last_ingested FROM (
-                        SELECT tournament_id, ingested_at FROM raw.raw_fivb_results
-                        UNION ALL
-                        SELECT tournament_id, ingested_at FROM raw.raw_fivb_rounds
-                    ) x GROUP BY tournament_id
-                )
-                SELECT i.tournament_id
-                FROM last_ingested i
-                JOIN raw.raw_fivb_tournaments t ON t.tournament_id = i.tournament_id
-                WHERE
-                  (t.start_date >= current_date - :cutoff_days * interval '1 day'
-                   AND i.last_ingested >= now() - :recent_hours * interval '1 hour')
-                  OR
-                  (t.start_date IS NULL OR t.start_date < current_date - :cutoff_days * interval '1 day')
-                  AND i.last_ingested >= now() - :older_days * interval '1 day'
-            """),
-            {
-                "cutoff_days": limits.recent_cutoff_days,
-                "recent_hours": limits.recent_window_hours,
-                "older_days": limits.older_window_days,
-            },
-        ).fetchall()
-    return {r[0] for r in rows}
+        if limits.recent_window_hours > 0 or limits.older_window_days > 0:
+            rows = conn.execute(
+                text("""
+                    WITH last_ingested AS (
+                        SELECT tournament_id, max(ingested_at) AS last_ingested FROM (
+                            SELECT tournament_id, ingested_at FROM raw.raw_fivb_results
+                            UNION ALL
+                            SELECT tournament_id, ingested_at FROM raw.raw_fivb_rounds
+                        ) x GROUP BY tournament_id
+                    )
+                    SELECT i.tournament_id
+                    FROM last_ingested i
+                    JOIN raw.raw_fivb_tournaments t ON t.tournament_id = i.tournament_id
+                    WHERE
+                      (t.start_date >= current_date - :cutoff_days * interval '1 day'
+                       AND i.last_ingested >= now() - :recent_hours * interval '1 hour')
+                      OR
+                      (t.start_date IS NULL OR t.start_date < current_date - :cutoff_days * interval '1 day')
+                      AND i.last_ingested >= now() - :older_days * interval '1 day'
+                """),
+                {
+                    "cutoff_days": limits.recent_cutoff_days,
+                    "recent_hours": limits.recent_window_hours,
+                    "older_days": limits.older_window_days,
+                },
+            ).fetchall()
+            skip = {r[0] for r in rows}
+        # Also skip tournaments we recently confirmed have no results and no rounds (VIS returns empty)
+        if limits.older_window_days > 0:
+            empty_rows = conn.execute(
+                text("""
+                    SELECT tournament_id
+                    FROM raw.raw_fivb_tournament_empty_check
+                    WHERE results_empty_at IS NOT NULL
+                      AND rounds_empty_at IS NOT NULL
+                      AND results_empty_at >= now() - :older_days * interval '1 day'
+                      AND rounds_empty_at >= now() - :older_days * interval '1 day'
+                """),
+                {"older_days": limits.older_window_days},
+            ).fetchall()
+            skip |= {r[0] for r in empty_rows}
+    return skip
 
 
 def _verify_core_tables(engine: Engine) -> None:
@@ -733,6 +803,7 @@ def run_full_ingestion(limits: IngestionLimits | None = None) -> None:
         print("  Truncated raw tables (TRUNCATE_RAW=1)")
 
     ensure_raw_tables(engine)
+    ensure_raw_tournament_empty_check_table(engine)
 
     timings: List[Tuple[str, float]] = []
 
@@ -757,12 +828,17 @@ def run_full_ingestion(limits: IngestionLimits | None = None) -> None:
     # Only expand (results/rounds) for tournaments from 2015 onwards
     MIN_EXPAND_YEAR = 2015
     tournament_ids = []
+    today = date.today()
     for t in to_process:
         no = _int_or_none(t.get("No"))
         if no is None:
             continue
         year = _tournament_year(t)
         if year is not None and year < MIN_EXPAND_YEAR:
+            continue
+        # Skip future tournaments: no results exist before start
+        start = _date_or_none(t.get("StartDate"))
+        if start is not None and start > today:
             continue
         tournament_ids.append(no)
     # Skip by two-bucket rule: recent (end_date >= today - 90d) if ingested in 24h; older if in 30d

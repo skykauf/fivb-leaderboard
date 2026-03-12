@@ -23,6 +23,7 @@ if __name__ == "__main__":
         sys.path.insert(0, str(root))
 
 from sqlalchemy import text
+from tqdm import tqdm
 
 from etl.db import get_engine
 from etl.config import get_db_config
@@ -36,28 +37,45 @@ def expected_score(elo_a: float, elo_b: float) -> float:
     return 1.0 / (1.0 + 10.0 ** ((elo_b - elo_a) / 400.0))
 
 
+def _to_date(val) -> date | None:
+    """Convert tournament_start_date (or similar) to date for as_of_date."""
+    if val is None:
+        return None
+    if hasattr(val, "date"):
+        return val.date()
+    s = str(val)[:10]
+    if not s or s == "None":
+        return None
+    try:
+        return date.fromisoformat(s)
+    except ValueError:
+        return None
+
+
 def run_elo(engine) -> list[dict]:
-    """Read mart.elo_match_feed, compute Elo per gender over time, return list of history rows."""
-    with engine.connect() as conn:
+    """Read mart.elo_match_feed, compute Elo per gender over time, return list of history rows.
+    Uses match_date (tournament_start_date + round date fallback; played_at is rarely populated) for ordering and as_of_date."""
+    with engine.begin() as conn:
         rows = conn.execute(
             text("""
-                select match_id, played_at, tournament_gender,
+                select match_id, match_date, tournament_gender,
                        team1_player_a_id, team1_player_b_id,
                        team2_player_a_id, team2_player_b_id,
                        is_winner_team1
                 from mart.elo_match_feed
-                order by tournament_gender, played_at
+                where match_date is not null
+                order by tournament_gender, match_date, match_id
             """)
         ).fetchall()
 
     history: list[dict] = []
-    # current_elo[gender][player_id] = elo
     current: dict[str, dict[int, float]] = {}
 
-    for r in rows:
-        match_id, played_at, gender, t1_pa, t1_pb, t2_pa, t2_pb, is_winner_team1 = r
-        if played_at is None:
-            continue  # skip matches without a played_at (can't order or set as_of_date)
+    for r in tqdm(rows, desc="Elo compute", unit="match"):
+        match_id, match_date, gender, t1_pa, t1_pb, t2_pa, t2_pb, is_winner_team1 = r
+        as_of = _to_date(match_date)
+        if as_of is None:
+            continue
         if gender not in current:
             current[gender] = {}
 
@@ -76,7 +94,6 @@ def run_elo(engine) -> list[dict]:
         current[gender][t2_pa] = elo(t2_pa) + half * delta_team2
         current[gender][t2_pb] = elo(t2_pb) + half * delta_team2
 
-        as_of = played_at.date() if hasattr(played_at, "date") else date.fromisoformat(str(played_at)[:10])
         for pid in (t1_pa, t1_pb, t2_pa, t2_pb):
             history.append({
                 "player_id": pid,
@@ -109,17 +126,33 @@ def ensure_table(engine) -> None:
                 conn.execute(text(stmt))
 
 
-def write_history(engine, history: list[dict]) -> None:
-    """Truncate core.player_elo_history and insert new rows."""
+def write_history(engine, history: list[dict]) -> int:
+    """Truncate core.player_elo_history and insert new rows.
+    The feed can have duplicate match_id (e.g. same team in Qualification and Main Draw), so
+    we dedupe by (player_id, gender, match_id) keeping the last row (final elo). We then use
+    ON CONFLICT DO UPDATE for safety. Postgres does not allow duplicate keys within the same
+    INSERT, so we must dedupe before batching.
+    Returns the number of rows written (after dedupe)."""
     with engine.begin() as conn:
         conn.execute(text("truncate table core.player_elo_history"))
     if not history:
-        return
-    columns = ["player_id", "gender", "as_of_date", "match_id", "elo_rating"]
-    # Use raw insert in batches to avoid adding pandas/sqlalchemy bulk dependency
+        return 0
+    # Dedupe by (player_id, gender, match_id); last occurrence wins (final elo after that match).
+    seen: dict[tuple[int, str, int], dict] = {}
+    for row in history:
+        key = (row["player_id"], row["gender"], row["match_id"])
+        seen[key] = row
+    history = list(seen.values())
+    batch_size = 1000  # smaller batches to stay under DB parameter limits
+    num_batches = (len(history) + batch_size - 1) // batch_size
     with engine.begin() as conn:
-        for i in range(0, len(history), 5000):
-            batch = history[i : i + 5000]
+        for i in tqdm(
+            range(0, len(history), batch_size),
+            total=num_batches,
+            desc="Write history",
+            unit="batch",
+        ):
+            batch = history[i : i + batch_size]
             placeholders = []
             params = {}
             for j, row in enumerate(batch):
@@ -133,9 +166,11 @@ def write_history(engine, history: list[dict]) -> None:
                 params[f"p{j}_4"] = row["elo_rating"]
             sql = (
                 "insert into core.player_elo_history (player_id, gender, as_of_date, match_id, elo_rating) "
-                "values " + ", ".join(placeholders)
+                "values " + ", ".join(placeholders) + " "
+                "on conflict (player_id, gender, match_id) do update set as_of_date = excluded.as_of_date, elo_rating = excluded.elo_rating"
             )
             conn.execute(text(sql), params)
+    return len(history)
 
 
 def main() -> None:
@@ -150,9 +185,11 @@ def main() -> None:
     if args.init_only:
         print("Created core.player_elo_history (empty). Run dbt run, then run this script without --init-only to populate.")
         return
+    print("Reading mart.elo_match_feed…")
     history = run_elo(engine)
-    write_history(engine, history)
-    print(f"Wrote {len(history)} player-elo rows to core.player_elo_history.")
+    print(f"Computed {len(history)} history rows.")
+    written = write_history(engine, history)
+    print(f"Wrote {written} rows to core.player_elo_history.")
 
 
 if __name__ == "__main__":

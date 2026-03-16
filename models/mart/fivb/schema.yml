@@ -239,3 +239,36 @@ models:
         description: "Tournament where the last match was played."
       - name: last_match_tournament_name
       - name: last_match_tournament_season
+
+  - name: player_elo_round_weighted_history
+    description: "Round-weighted Elo history: one row per player per match (finals/semis count more than pool). Same columns as player_elo_history."
+    columns:
+      - name: player_id
+      - name: player_name
+      - name: player_country_code
+      - name: player_height_inches
+      - name: gender
+      - name: as_of_date
+      - name: match_id
+      - name: tournament_id
+      - name: tournament_name
+      - name: tournament_season
+      - name: elo_rating
+
+  - name: player_elo_round_weighted_latest
+    description: "Latest round-weighted Elo per player per gender (finals/semis weighted more than pool). Same columns as player_elo_latest."
+    columns:
+      - name: player_id
+      - name: player_name
+      - name: player_country_code
+      - name: player_height_inches
+      - name: gender
+      - name: elo_rating
+      - name: matches_played
+      - name: wins
+      - name: losses
+      - name: last_match_played_at
+      - name: last_match_id
+      - name: last_match_tournament_id
+      - name: last_match_tournament_name
+      - name: last_match_tournament_season

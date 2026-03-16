@@ -9,3 +9,5 @@ sources:
     tables:
       - name: player_elo_history
         description: "One row per player per match played: Elo rating after that match (H2H-only, de novo)."
+      - name: player_elo_round_weighted_history
+        description: "Same shape as player_elo_history; Elo with round weighting (finals/semis count more than pool)."

@@ -9,6 +9,7 @@ select
     e.player_id,
     p.full_name as player_name,
     p.country_code as player_country_code,
+    p.height_inches as player_height_inches,
     e.gender,
     e.as_of_date,
     e.match_id,

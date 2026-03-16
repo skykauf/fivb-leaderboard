@@ -11,7 +11,7 @@ select
     full_name,
     gender,
     birth_date,
-    height_cm,
+    round((height_cm / 2.54)::numeric, 1) as height_inches,
     country_code,
     profile_url,
     payload,

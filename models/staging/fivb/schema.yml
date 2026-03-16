@@ -74,7 +74,8 @@ models:
       - name: full_name
       - name: gender
       - name: birth_date
-      - name: height_cm
+      - name: height_inches
+        description: "Player height in inches, converted from raw height_cm (cm / 2.54). Null when not provided."
       - name: country_code
         description: "Player federation/country from VIS FederationCode (e.g. USA, BRA). GetPlayerList does not return CountryCode; we use FederationCode."
       - name: profile_url

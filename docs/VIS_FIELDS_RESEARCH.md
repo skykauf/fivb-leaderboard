@@ -79,7 +79,7 @@ Research on VIS entity fields we do **not** currently ingest (or only keep in `p
 
 **Currently requested (GetPlayerList):** No, FirstName, LastName, BirthDate, BirthPlace, Height, Weight, CountryCode, Gender, FederationCode, NationalityCode, PlaysBeach, PlaysVolley, TeamName, ConfederationCode.
 
-**Currently normalized:** player_id, first_name, last_name, full_name, gender, birth_date, height_cm, country_code (from FederationCode), profile_url (always null).
+**Currently normalized:** player_id, first_name, last_name, full_name, gender, birth_date, height_cm (raw), height_inches (staging, from height_cm), country_code (from FederationCode), profile_url (always null).
 
 | Field | VIS description | Use case |
 |-------|-----------------|----------|

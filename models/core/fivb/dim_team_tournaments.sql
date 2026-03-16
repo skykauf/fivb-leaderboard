@@ -15,6 +15,8 @@ select
     tt.valid_to,
     pa.full_name as player_a_name,
     pb.full_name as player_b_name,
+    pa.height_inches as player_a_height_inches,
+    pb.height_inches as player_b_height_inches,
     dt.name as tournament_name,
     dt.season,
     dt.gender as tournament_gender,

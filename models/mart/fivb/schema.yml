@@ -29,6 +29,14 @@ models:
       - name: round_phase
       - name: team1_display_name
       - name: team2_display_name
+      - name: team1_player_a_height_inches
+        description: "Team1 player A height in inches (from stg_fivb_players)."
+      - name: team1_player_b_height_inches
+        description: "Team1 player B height in inches (from stg_fivb_players)."
+      - name: team2_player_a_height_inches
+        description: "Team2 player A height in inches (from stg_fivb_players)."
+      - name: team2_player_b_height_inches
+        description: "Team2 player B height in inches (from stg_fivb_players)."
       - name: team1_ranking_position
       - name: team2_ranking_position
       - name: team1_finishing_pos
@@ -168,7 +176,7 @@ models:
         description: "True if ranking position was in top 16 at tournament time (Olympic-relevant)."
 
   - name: elo_match_feed
-    description: "One row per completed match: H2H-only input for the Python Elo calculator (no rankings/standings). Ordered by match_date (played_at is rarely populated)."
+    description: "One row per completed match: H2H-only input for the Python Elo calculator (no rankings/standings). Ordered by match_date (played_at is rarely populated). Includes round fields for round-weighted Elo."
     columns:
       - name: match_id
       - name: match_date
@@ -180,6 +188,14 @@ models:
       - name: team2_player_a_id
       - name: team2_player_b_id
       - name: is_winner_team1
+      - name: round_phase
+        description: "Round phase from stg_fivb_rounds (e.g. Final, Pool). Used for round-weighted Elo."
+      - name: round_name
+        description: "Human-readable round name. Used for round-weighted Elo."
+      - name: is_final
+        description: "True for final / gold medal match. Used for round-weighted Elo."
+      - name: is_pool_phase
+        description: "True for pool play. Used for round-weighted Elo."
 
   - name: player_elo_history
     description: "Flat Elo history: one row per player per match with player and tournament context (from core.player_elo_history + players + matches + tournaments)."
@@ -188,6 +204,8 @@ models:
       - name: player_name
       - name: player_country_code
         description: "Player country code (from stg_fivb_players)."
+      - name: player_height_inches
+        description: "Player height in inches (from stg_fivb_players)."
       - name: gender
       - name: as_of_date
       - name: match_id
@@ -204,6 +222,8 @@ models:
       - name: player_name
       - name: player_country_code
         description: "Player country code (from stg_fivb_players)."
+      - name: player_height_inches
+        description: "Player height in inches (from stg_fivb_players)."
       - name: gender
       - name: elo_rating
       - name: matches_played

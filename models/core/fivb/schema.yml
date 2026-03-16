@@ -27,14 +27,24 @@ models:
         description: "Derived: 'Player A / Player B' for display."
       - name: player_a_name
       - name: player_b_name
+      - name: player_a_height_inches
+        description: "Player A height in inches (from stg_fivb_players)."
+      - name: player_b_height_inches
+        description: "Player B height in inches (from stg_fivb_players)."
 
   - name: fct_matches
-    description: "Match-level fact with tournament, round, team display names and derived flags."
+    description: "Match-level fact with tournament, round, team display names and derived flags. Use match_date for time ordering (played_at is rarely populated)."
     columns:
       - name: match_id
         tests:
           - dbt_utils.at_least_one
       - name: tournament_id
+      - name: played_at
+        description: "Match timestamp when available; rarely populated in source."
+      - name: round_start_date
+        description: "Round start date from stg_fivb_rounds (when round has dates)."
+      - name: match_date
+        description: "Canonical match date: COALESCE(played_at, round_start_date, tournament_start_date). Use for ordering and as-of semantics."
       - name: is_winner_team1
         description: "True when team1 won the match."
       - name: is_final
